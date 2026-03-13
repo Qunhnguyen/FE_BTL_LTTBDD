@@ -2,20 +2,52 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../core/router/app_router.dart';
+import 'providers/auth_provider.dart';
 
 enum UserType { student, teacher }
 
 final userTypeProvider = StateProvider<UserType>((ref) => UserType.student);
 final obscurePasswordProvider = StateProvider<bool>((ref) => true);
 
-class LoginScreen extends ConsumerWidget {
+class LoginScreen extends ConsumerStatefulWidget {
   const LoginScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<LoginScreen> createState() => _LoginScreenState();
+}
+
+class _LoginScreenState extends ConsumerState<LoginScreen> {
+  final _emailController = TextEditingController();
+  final _passwordController = TextEditingController();
+
+  @override
+  void dispose() {
+    _emailController.dispose();
+    _passwordController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final userType = ref.watch(userTypeProvider);
     final obscurePassword = ref.watch(obscurePasswordProvider);
+    final authState = ref.watch(authProvider);
+
+    // Lắng nghe trạng thái để điều hướng hoặc báo lỗi
+    ref.listen(authProvider, (previous, next) {
+      if (next.status == AuthStatus.authenticated) {
+        if (userType == UserType.student) {
+          context.goNamed(AppRouteNames.studentHome);
+        } else {
+          context.goNamed(AppRouteNames.teacherDashboard);
+        }
+      } else if (next.status == AuthStatus.error) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(next.errorMessage ?? 'Đã có lỗi xảy ra')),
+        );
+      }
+    });
 
     return Scaffold(
       appBar: AppBar(
@@ -35,7 +67,6 @@ class LoginScreen extends ConsumerWidget {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               const SizedBox(height: 32),
-              // Logo/Icon
               Center(
                 child: Container(
                   padding: const EdgeInsets.all(24),
@@ -52,7 +83,7 @@ class LoginScreen extends ConsumerWidget {
               ),
               const SizedBox(height: 32),
 
-              // Segmented Control (User Type)
+              // Segmented Control
               Container(
                 padding: const EdgeInsets.all(4),
                 decoration: BoxDecoration(
@@ -89,15 +120,15 @@ class LoginScreen extends ConsumerWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    userType == UserType.student ? 'MSSV / Email' : 'Email Giảng viên',
+                    userType == UserType.student ? 'Email Sinh viên' : 'Email Giảng viên',
                     style: const TextStyle(fontWeight: FontWeight.bold),
                   ),
                   const SizedBox(height: 8),
                   TextField(
+                    controller: _emailController,
+                    keyboardType: TextInputType.emailAddress,
                     decoration: InputDecoration(
-                      hintText: userType == UserType.student
-                          ? 'Nhập MSSV hoặc Email'
-                          : 'Nhập email của bạn',
+                      hintText: 'Nhập email của bạn',
                       prefixIcon: const Icon(Icons.person_outline),
                       filled: true,
                       fillColor: theme.brightness == Brightness.dark
@@ -116,6 +147,7 @@ class LoginScreen extends ConsumerWidget {
                   ),
                   const SizedBox(height: 8),
                   TextField(
+                    controller: _passwordController,
                     obscureText: obscurePassword,
                     decoration: InputDecoration(
                       hintText: 'Nhập mật khẩu',
@@ -153,14 +185,28 @@ class LoginScreen extends ConsumerWidget {
 
               // Login Button
               ElevatedButton(
-                onPressed: () {
-                  if (userType == UserType.student) {
-                    context.goNamed(AppRouteNames.studentHome);
-                  } else {
-                    context.goNamed(AppRouteNames.teacherDashboard);
-                  }
-                },
-                child: const Text('Đăng nhập'),
+                onPressed: authState.status == AuthStatus.authenticating
+                    ? null
+                    : () {
+                        final email = _emailController.text.trim();
+                        final password = _passwordController.text.trim();
+                        final role = userType == UserType.student ? 'STUDENT' : 'TEACHER';
+                        
+                        if (email.isNotEmpty && password.isNotEmpty) {
+                          ref.read(authProvider.notifier).login(email, password, role);
+                        } else {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text('Vui lòng nhập đầy đủ thông tin')),
+                          );
+                        }
+                      },
+                child: authState.status == AuthStatus.authenticating
+                    ? const SizedBox(
+                        height: 20,
+                        width: 20,
+                        child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
+                      )
+                    : const Text('Đăng nhập'),
               ),
 
               const SizedBox(height: 32),
