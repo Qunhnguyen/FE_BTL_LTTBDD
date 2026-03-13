@@ -13,7 +13,7 @@ class StudentHomeScreen extends ConsumerWidget {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
     final currentFilter = ref.watch(contestStatusFilterProvider);
-    final filteredContests = ref.watch(filteredContestsProvider);
+    final filteredContestsAsync = ref.watch(filteredContestsProvider);
 
     return Scaffold(
       body: CustomScrollView(
@@ -204,19 +204,36 @@ class StudentHomeScreen extends ConsumerWidget {
           ),
 
           // Contest List
-          SliverPadding(
-            padding: const EdgeInsets.fromLTRB(20, 16, 20, 100),
-            sliver: SliverList(
-              delegate: SliverChildBuilderDelegate(
-                (context, index) {
-                  final contest = filteredContests[index];
-                  return Padding(
-                    padding: const EdgeInsets.only(bottom: 16),
-                    child: _ContestCard(contest: contest),
-                  );
-                },
-                childCount: filteredContests.length,
-              ),
+          filteredContestsAsync.when(
+            data: (contests) {
+              if (contests.isEmpty) {
+                return const SliverFillRemaining(
+                  child: Center(
+                    child: Text('Không có cuộc thi nào.'),
+                  ),
+                );
+              }
+              return SliverPadding(
+                padding: const EdgeInsets.fromLTRB(20, 16, 20, 100),
+                sliver: SliverList(
+                  delegate: SliverChildBuilderDelegate(
+                    (context, index) {
+                      final contest = contests[index];
+                      return Padding(
+                        padding: const EdgeInsets.only(bottom: 16),
+                        child: _ContestCard(contest: contest),
+                      );
+                    },
+                    childCount: contests.length,
+                  ),
+                ),
+              );
+            },
+            loading: () => const SliverFillRemaining(
+              child: Center(child: CircularProgressIndicator()),
+            ),
+            error: (err, stack) => SliverFillRemaining(
+              child: Center(child: Text('Lỗi: $err')),
             ),
           ),
         ],
