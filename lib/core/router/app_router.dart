@@ -12,6 +12,7 @@ import '../../features/student/quiz/screens/quiz_result_screen.dart';
 import '../../features/student/quiz/screens/quiz_screen.dart';
 import '../../features/teacher/dashboard/screens/teacher_dashboard_screen.dart';
 import '../../features/teacher/questions/screens/question_management_screen.dart';
+import '../../features/teacher/settings/screens/teacher_settings_screen.dart';
 import '../../features/teacher/subjects/screens/subject_management_screen.dart';
 import '../../features/welcome/welcome_screen.dart';
 
@@ -23,6 +24,7 @@ final _studentProfileKey = GlobalKey<NavigatorState>();
 final _teacherDashboardKey = GlobalKey<NavigatorState>();
 final _teacherSubjectsKey = GlobalKey<NavigatorState>();
 final _teacherQuestionsKey = GlobalKey<NavigatorState>();
+final _teacherSettingsKey = GlobalKey<NavigatorState>();
 
 class AppRouteNames {
   AppRouteNames._();
@@ -43,6 +45,7 @@ class AppRouteNames {
   static const String teacherDashboard = '/teacher/dashboard';
   static const String teacherSubjects = '/teacher/subjects';
   static const String teacherQuestions = '/teacher/questions';
+  static const String teacherSettings = '/teacher/settings';
 }
 
 GoRouter createAppRouter() {
@@ -165,11 +168,12 @@ GoRouter createAppRouter() {
             ],
           ),
           StatefulShellBranch(
+            navigatorKey: _teacherSettingsKey,
             routes: [
               GoRoute(
-                path: '/teacher/settings',
-                builder: (context, state) =>
-                    const Scaffold(body: Center(child: Text('Cài đặt'))),
+                path: AppRouteNames.teacherSettings,
+                name: AppRouteNames.teacherSettings,
+                builder: (context, state) => const TeacherSettingsScreen(),
               ),
             ],
           ),
