@@ -13,6 +13,35 @@ class QuizResultScreen extends ConsumerWidget {
     final isDark = theme.brightness == Brightness.dark;
     final result = ref.watch(quizResultProvider);
 
+    if (result == null) {
+      return Scaffold(
+        appBar: AppBar(
+          title: const Text('Kết quả Bài thi'),
+        ),
+        body: Center(
+          child: Padding(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Icon(Icons.assignment_late_outlined, size: 64, color: Colors.grey),
+                const SizedBox(height: 16),
+                const Text(
+                  'Chưa có dữ liệu kết quả để hiển thị.',
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 24),
+                ElevatedButton(
+                  onPressed: () => context.goNamed(AppRouteNames.studentHome),
+                  child: const Text('Về trang chủ'),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
+
     return Scaffold(
       appBar: AppBar(
         leading: IconButton(
@@ -93,7 +122,7 @@ class QuizResultScreen extends ConsumerWidget {
                       text: TextSpan(
                         children: [
                           TextSpan(
-                            text: '${result.score}',
+                            text: _formatScore(result.score),
                             style: TextStyle(
                               fontSize: 56,
                               fontWeight: FontWeight.w800,
@@ -101,7 +130,7 @@ class QuizResultScreen extends ConsumerWidget {
                             ),
                           ),
                           TextSpan(
-                            text: '/${result.totalPossibleScore}',
+                            text: '/${_formatScore(result.totalPossibleScore)}',
                             style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.grey),
                           ),
                         ],
@@ -167,6 +196,13 @@ class QuizResultScreen extends ConsumerWidget {
         ),
       ),
     );
+  }
+
+  String _formatScore(double value) {
+    if (value == value.roundToDouble()) {
+      return value.toInt().toString();
+    }
+    return value.toStringAsFixed(1);
   }
 }
 

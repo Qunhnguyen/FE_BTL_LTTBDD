@@ -44,6 +44,36 @@ class AuthRepository {
     return await _storage.read(key: _tokenKey);
   }
 
+  Future<User?> getCurrentUser() async {
+    final token = await getToken();
+    if (token == null || token.isEmpty) {
+      return null;
+    }
+
+    try {
+      final response = await _apiClient.get('/api/auth/me');
+      return User.fromJson(
+        Map<String, dynamic>.from(response.data as Map),
+        token: token,
+      );
+    } catch (_) {
+      final storedId = await _storage.read(key: _userIdKey);
+      final storedRole = await _storage.read(key: _userRoleKey);
+
+      if (storedId == null || storedId.isEmpty) {
+        return null;
+      }
+
+      return User(
+        id: storedId,
+        email: '',
+        name: '',
+        role: storedRole ?? '',
+        token: token,
+      );
+    }
+  }
+
   Future<void> logout() async {
     await _storage.delete(key: _tokenKey);
     await _storage.delete(key: _userIdKey);

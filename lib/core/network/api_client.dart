@@ -1,4 +1,7 @@
+import 'dart:convert';
+
 import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
@@ -67,6 +70,7 @@ class ApiClient {
         cancelToken: cancelToken,
       );
     } on DioException catch (e) {
+      _logDioError('GET', path, e);
       throw AppFailure.fromDioError(e);
     }
   }
@@ -87,6 +91,7 @@ class ApiClient {
         cancelToken: cancelToken,
       );
     } on DioException catch (e) {
+      _logDioError('POST', path, e);
       throw AppFailure.fromDioError(e);
     }
   }
@@ -107,6 +112,7 @@ class ApiClient {
         cancelToken: cancelToken,
       );
     } on DioException catch (e) {
+      _logDioError('PUT', path, e);
       throw AppFailure.fromDioError(e);
     }
   }
@@ -127,7 +133,25 @@ class ApiClient {
         cancelToken: cancelToken,
       );
     } on DioException catch (e) {
+      _logDioError('DELETE', path, e);
       throw AppFailure.fromDioError(e);
+    }
+  }
+
+  void _logDioError(String method, String path, DioException error) {
+    final data = error.response?.data;
+    if (data == null) {
+      debugPrint('Response Text [$method $path ERROR]: ${error.message}');
+      return;
+    }
+
+    try {
+      final responseText = data is String
+          ? data
+          : const JsonEncoder.withIndent('  ').convert(data);
+      debugPrint('Response Text [$method $path ERROR]:\n$responseText');
+    } catch (_) {
+      debugPrint('Response Text [$method $path ERROR]: $data');
     }
   }
 }
