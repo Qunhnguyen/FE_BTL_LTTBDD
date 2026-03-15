@@ -25,20 +25,22 @@ class ContestRepository {
     return data.map((json) => Contest.fromJson(json)).toList();
   }
 
-  Future<Contest> createContest(String subjectId, Contest contest) async {
-    // Note: You might need a specialized toJson for creation
-    final response = await _apiClient.post('/api/admin/subjects/$subjectId/contests', data: {
-      'title': contest.title,
-      'description': contest.description,
-      'durationMinutes': contest.durationMinutes,
-      'startTime': contest.startTime?.toIso8601String(),
-    });
+  Future<Contest> createContest(String subjectId, Map<String, dynamic> contestData) async {
+    final response = await _apiClient.post(
+      '/api/admin/subjects/$subjectId/contests',
+      data: contestData,
+    );
     return Contest.fromJson(response.data);
   }
 
+  Future<void> deleteContest(String subjectId, String contestId) async {
+    await _apiClient.delete('/api/admin/subjects/$subjectId/contests/$contestId');
+  }
+
   Future<void> importQuestions(String subjectId, String contestId, String fileId) async {
-    await _apiClient.post('/api/admin/subjects/$subjectId/contests/$contestId/import-questions', queryParameters: {
-      'fileId': fileId,
-    });
+    await _apiClient.post(
+      '/api/admin/subjects/$subjectId/contests/$contestId/import-questions',
+      queryParameters: {'fileId': fileId},
+    );
   }
 }

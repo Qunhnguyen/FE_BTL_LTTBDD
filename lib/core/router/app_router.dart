@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../features/_shell/main_shell.dart';
 import '../../features/_shell/role_selection_screen.dart';
 import '../../features/auth/login_screen.dart';
+import '../../features/auth/providers/auth_provider.dart';
 import '../../features/student/history/screens/quiz_history_screen.dart';
 import '../../features/student/home/screens/student_home_screen.dart';
 import '../../features/student/leaderboard/screens/leaderboard_screen.dart';
@@ -13,7 +15,9 @@ import '../../features/student/quiz/screens/quiz_screen.dart';
 import '../../features/teacher/dashboard/screens/teacher_dashboard_screen.dart';
 import '../../features/teacher/questions/screens/question_management_screen.dart';
 import '../../features/teacher/settings/screens/teacher_settings_screen.dart';
+import '../../features/teacher/subjects/models/subject.dart';
 import '../../features/teacher/subjects/screens/subject_management_screen.dart';
+import '../../features/teacher/subjects/screens/teacher_contest_list_screen.dart';
 import '../../features/welcome/welcome_screen.dart';
 
 final _rootNavigatorKey = GlobalKey<NavigatorState>();
@@ -36,22 +40,42 @@ class AppRouteNames {
   // Student
   static const String studentHome = '/student/home';
   static const String studentHistory = '/student/history';
-  static const String studentQuiz = 'quiz'; // Relative path
-  static const String studentResult = 'result'; // Relative path
+  static const String studentQuiz = 'quiz/:contestId';
+  static const String studentResult = 'result';
   static const String studentLeaderboard = '/student/leaderboard';
   static const String studentProfile = '/student/profile';
 
   // Teacher
   static const String teacherDashboard = '/teacher/dashboard';
   static const String teacherSubjects = '/teacher/subjects';
+  static const String teacherContests = 'contests';
   static const String teacherQuestions = '/teacher/questions';
   static const String teacherSettings = '/teacher/settings';
 }
 
-GoRouter createAppRouter() {
+final routerProvider = Provider<GoRouter>((ref) {
+  final authState = ref.watch(authProvider);
+
   return GoRouter(
     navigatorKey: _rootNavigatorKey,
     initialLocation: AppRouteNames.welcome,
+    
+    // Logic Redirect tự động
+    redirect: (context, state) {
+      final isAuthenticated = authState.status == AuthStatus.authenticated;
+      final isLoggingIn = state.matchedLocation == AppRouteNames.login;
+      final isAtWelcome = state.matchedLocation == AppRouteNames.welcome;
+
+      if (isAuthenticated && (isLoggingIn || isAtWelcome)) {
+        // Tự động điều hướng theo Role nếu đã đăng nhập thành công
+        if (authState.user?.role == 'TEACHER') {
+          return AppRouteNames.teacherDashboard;
+        }
+        return AppRouteNames.studentHome;
+      }
+      return null;
+    },
+
     routes: <RouteBase>[
       GoRoute(
         path: AppRouteNames.welcome,
@@ -84,16 +108,20 @@ GoRouter createAppRouter() {
                 builder: (context, state) => const StudentHomeScreen(),
                 routes: [
                   GoRoute(
-                      path: AppRouteNames.studentQuiz,
-                      name: AppRouteNames.studentQuiz,
-                      builder: (context, state) => const QuizScreen(),
-                      routes: [
-                        GoRoute(
-                          path: AppRouteNames.studentResult,
-                          name: AppRouteNames.studentResult,
-                          builder: (context, state) => const QuizResultScreen(),
-                        ),
-                      ]),
+                    path: 'quiz/:contestId',
+                    name: AppRouteNames.studentQuiz,
+                    builder: (context, state) {
+                      final contestId = state.pathParameters['contestId']!;
+                      return QuizScreen(contestId: contestId);
+                    },
+                    routes: [
+                      GoRoute(
+                        path: AppRouteNames.studentResult,
+                        name: AppRouteNames.studentResult,
+                        builder: (context, state) => const QuizResultScreen(),
+                      ),
+                    ],
+                  ),
                 ],
               ),
             ],
@@ -154,6 +182,19 @@ GoRouter createAppRouter() {
                 path: AppRouteNames.teacherSubjects,
                 name: AppRouteNames.teacherSubjects,
                 builder: (context, state) => const SubjectManagementScreen(),
+                routes: [
+                  GoRoute(
+                    path: ':subjectId/contests',
+                    name: AppRouteNames.teacherContests,
+                    builder: (context, state) {
+                      final subjectId = state.pathParameters['subjectId']!;
+                      final subjectName = state.uri.queryParameters['name'] ?? 'Môn học';
+                      return TeacherContestListScreen(
+                        subject: Subject(id: subjectId, name: subjectName),
+                      );
+                    },
+                  ),
+                ],
               ),
             ],
           ),
@@ -181,4 +222,4 @@ GoRouter createAppRouter() {
       ),
     ],
   );
-}
+});

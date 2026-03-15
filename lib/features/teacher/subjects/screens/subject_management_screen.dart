@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
+import '../../../../core/router/app_router.dart';
 import '../models/subject.dart';
 import '../repositories/subject_repository.dart';
 
@@ -44,16 +46,18 @@ class SubjectManagementScreen extends ConsumerWidget {
                   return Card(
                     margin: const EdgeInsets.only(bottom: 12),
                     child: ListTile(
+                      onTap: () {
+                        // Chuyển sang màn hình danh sách cuộc thi của môn này
+                        context.pushNamed(
+                          AppRouteNames.teacherContests,
+                          pathParameters: {'subjectId': subject.id},
+                          queryParameters: {'name': subject.name},
+                        );
+                      },
                       leading: const CircleAvatar(child: Icon(Icons.book)),
                       title: Text(subject.name, style: const TextStyle(fontWeight: FontWeight.bold)),
                       subtitle: Text(subject.description ?? 'Không có mô tả'),
-                      trailing: IconButton(
-                        icon: const Icon(Icons.delete_outline, color: Colors.red),
-                        onPressed: () async {
-                          await ref.read(subjectRepositoryProvider).deleteSubject(subject.id);
-                          ref.refresh(subjectsProvider);
-                        },
-                      ),
+                      trailing: const Icon(Icons.chevron_right),
                     ),
                   );
                 },
@@ -96,14 +100,22 @@ class SubjectManagementScreen extends ConsumerWidget {
           ElevatedButton(
             onPressed: () async {
               if (nameController.text.isNotEmpty) {
-                final newSubject = Subject(
-                  id: '', // Backend tự tạo ID
-                  name: nameController.text,
-                  description: descController.text,
-                );
-                await ref.read(subjectRepositoryProvider).createSubject(newSubject);
-                ref.refresh(subjectsProvider);
-                if (context.mounted) Navigator.pop(context);
+                try {
+                  await ref.read(subjectRepositoryProvider).createSubject(
+                        Subject(id: '', name: nameController.text, description: descController.text),
+                      );
+                  ref.refresh(subjectsProvider);
+                  if (context.mounted) {
+                    Navigator.pop(context);
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Đã thêm môn học thành công!'), backgroundColor: Colors.green),
+                    );
+                  }
+                } catch (e) {
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Lỗi: $e')));
+                  }
+                }
               }
             },
             child: const Text('Lưu'),

@@ -63,6 +63,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
   }
 }
 
+// Khai báo kiểu tường minh để tránh lỗi circularity
 final authProvider = StateNotifierProvider<AuthNotifier, AuthState>((ref) {
   final repository = ref.watch(authRepositoryProvider);
   return AuthNotifier(repository);

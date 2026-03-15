@@ -13,21 +13,9 @@ class MainShell extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
-
     return Scaffold(
       body: navigationShell,
-      bottomNavigationBar: Container(
-        decoration: BoxDecoration(
-          border: Border(
-            top: BorderSide(
-              color: isDark ? Colors.white10 : (Colors.grey[200] ?? Colors.grey),
-            ),
-          ),
-        ),
-        child: isStudent ? _buildStudentNav(context) : _buildTeacherNav(context),
-      ),
+      bottomNavigationBar: isStudent ? _buildStudentNav(context) : _buildTeacherNav(context),
       floatingActionButton: !isStudent ? _buildTeacherFAB(context) : null,
       floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
     );
@@ -109,7 +97,7 @@ class MainShell extends StatelessWidget {
       onPressed: () {},
       backgroundColor: Theme.of(context).colorScheme.primary,
       shape: const CircleBorder(),
-      child: const Icon(Icons.add, color: Colors.black, size: 32),
+      child: const Icon(Icons.add, color: Colors.white, size: 32),
     );
   }
 }
