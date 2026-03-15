@@ -37,11 +37,10 @@ class QuizHistoryScreen extends ConsumerWidget {
                           style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                         ),
                       ),
-                      const SizedBox(width: 48), // Placeholder for balance
+                      const SizedBox(width: 48),
                     ],
                   ),
                   const SizedBox(height: 16),
-                  // Filter Chips
                   SingleChildScrollView(
                     scrollDirection: Axis.horizontal,
                     child: Row(
@@ -59,7 +58,7 @@ class QuizHistoryScreen extends ConsumerWidget {
                         ),
                         const SizedBox(width: 8),
                         _FilterChip(
-                          label: 'Chưa xong',
+                          label: 'Đang làm',
                           isSelected: currentFilter == HistoryFilter.inProgress,
                           onTap: () => ref.read(historyFilterProvider.notifier).state = HistoryFilter.inProgress,
                         ),
@@ -72,30 +71,32 @@ class QuizHistoryScreen extends ConsumerWidget {
 
             // List
             Expanded(
-              child: ListView.builder(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-                itemCount: groupKeys.length,
-                itemBuilder: (context, index) {
-                  final groupKey = groupKeys[index];
-                  final items = groupedHistory[groupKey]!;
-                  return Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Padding(
-                        padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 8),
-                        child: Text(
-                          groupKey.toUpperCase(),
-                          style: TextStyle(color: Colors.grey, fontSize: 12, fontWeight: FontWeight.bold, letterSpacing: 1.2),
-                        ),
-                      ),
-                      ...items.map((item) => Padding(
-                        padding: const EdgeInsets.only(bottom: 12),
-                        child: _HistoryCard(entry: item),
-                      )),
-                    ],
-                  );
-                },
-              ),
+              child: groupKeys.isEmpty 
+                ? const Center(child: Text('Chưa có lịch sử làm bài.'))
+                : ListView.builder(
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+                    itemCount: groupKeys.length,
+                    itemBuilder: (context, index) {
+                      final groupKey = groupKeys[index];
+                      final items = groupedHistory[groupKey] ?? [];
+                      return Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 8),
+                            child: Text(
+                              groupKey.toUpperCase(),
+                              style: const TextStyle(color: Colors.grey, fontSize: 12, fontWeight: FontWeight.bold, letterSpacing: 1.2),
+                            ),
+                          ),
+                          ...items.map((item) => Padding(
+                            padding: const EdgeInsets.only(bottom: 12),
+                            child: _HistoryCard(entry: item),
+                          )),
+                        ],
+                      );
+                    },
+                  ),
             ),
           ],
         ),
@@ -123,7 +124,6 @@ class _FilterChip extends StatelessWidget {
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         padding: const EdgeInsets.symmetric(horizontal: 20),
         elevation: isSelected ? 4 : 0,
-        shadowColor: theme.colorScheme.primary.withOpacity(0.3),
       ),
       child: Text(label, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
     );
@@ -139,15 +139,15 @@ class _HistoryCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     bool isCompleted = entry.status == QuizHistoryStatus.completed;
-    final scoreValue = entry.score ?? 0;
-    bool isLowScore = isCompleted && scoreValue < 5.0;
+    double score = entry.score ?? 0.0;
+    bool isLowScore = isCompleted && score < 5.0;
 
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: isDark ? Colors.white.withOpacity(0.05) : Colors.white,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: isDark ? Colors.white10 : Colors.grey[200]!),
+        border: Border.all(color: isDark ? Colors.white10 : (Colors.grey[200] ?? Colors.grey)),
       ),
       child: Column(
         children: [
@@ -181,7 +181,7 @@ class _HistoryCard extends StatelessWidget {
                     borderRadius: BorderRadius.circular(6),
                   ),
                   child: Text(
-                    '${scoreValue.toStringAsFixed(scoreValue % 1 == 0 ? 0 : 1)}/${entry.maxScore.toStringAsFixed(entry.maxScore % 1 == 0 ? 0 : 1)}',
+                    '$score/${entry.maxScore}',
                     style: TextStyle(color: isLowScore ? Colors.red : Colors.green, fontWeight: FontWeight.bold, fontSize: 12),
                   ),
                 ),
@@ -199,8 +199,8 @@ class _HistoryCard extends StatelessWidget {
                   const SizedBox(width: 6),
                   Text(
                     isCompleted
-                        ? '${entry.dateTime.day}/${entry.dateTime.month}/${entry.dateTime.year} • ${entry.dateTime.hour}:${entry.dateTime.minute.toString().padLeft(2, '0')}'
-                        : (entry.remainingTime ?? 'Dang cap nhat'),
+                        ? '${entry.dateTime.day}/${entry.dateTime.month}/${entry.dateTime.year}'
+                        : (entry.remainingTime ?? 'Đang diễn ra'),
                     style: const TextStyle(color: Colors.grey, fontSize: 12),
                   ),
                 ],

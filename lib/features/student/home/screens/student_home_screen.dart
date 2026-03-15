@@ -441,7 +441,10 @@ class _ContestCard extends StatelessWidget {
                     children: [
                       _ParticipantStack(avatars: contest.participantAvatars, total: contest.totalParticipants),
                       ElevatedButton(
-                        onPressed: () => context.pushNamed(AppRouteNames.studentQuiz),
+                        onPressed: () => context.pushNamed(
+                          AppRouteNames.studentQuiz,
+                          pathParameters: {'contestId': contest.id}, // Truyền tham số ID cuộc thi
+                        ),
                         style: ElevatedButton.styleFrom(
                           minimumSize: const Size(120, 36),
                           padding: const EdgeInsets.symmetric(horizontal: 16),

@@ -1,49 +1,7 @@
 import 'dart:async';
-
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/question.dart';
-
-// --- Mock Data ---
-final mockQuestions = [
-  Question(
-    id: 'q1',
-    text: 'Đâu là Framework được phát triển bởi Google để xây dựng giao diện người dùng đa nền tảng?',
-    answers: [
-      Answer(id: 'a1', text: 'React Native', label: 'A'),
-      Answer(id: 'a2', text: 'Flutter', label: 'B'),
-      Answer(id: 'a3', text: 'SwiftUI', label: 'C'),
-      Answer(id: 'a4', text: 'Kotlin Multiplatform', label: 'D'),
-    ],
-    correctAnswerId: 'a2',
-    tags: ['Mobile', 'Framework'],
-  ),
-  Question(
-    id: 'q2',
-    text: 'Ngôn ngữ lập trình nào thường được sử dụng cùng với Flutter?',
-    answers: [
-      Answer(id: 'a5', text: 'Dart', label: 'A'),
-      Answer(id: 'a6', text: 'Java', label: 'B'),
-      Answer(id: 'a7', text: 'Swift', label: 'C'),
-      Answer(id: 'a8', text: 'Python', label: 'D'),
-    ],
-    correctAnswerId: 'a5',
-    tags: ['Programming', 'Mobile'],
-  ),
-  Question(
-    id: 'q3',
-    text: 'Đâu là ngôn ngữ lập trình hướng đối tượng?',
-    answers: [
-        Answer(id: 'a9', text: 'HTML', label: 'A'),
-        Answer(id: 'a10', text: 'Java', label: 'B'),
-        Answer(id: 'a11', text: 'CSS', label: 'C'),
-        Answer(id: 'a12', text: 'SQL', label: 'D'),
-    ],
-    correctAnswerId: 'a10',
-    difficulty: 'Dễ',
-    points: 3,
-  ),
-  // Add more mock questions here
-];
+import '../repositories/quiz_repository.dart';
 
 // --- State --- 
 class QuizState {
@@ -51,39 +9,75 @@ class QuizState {
   final int currentQuestionIndex;
   final Map<String, String> selectedAnswers; // questionId -> answerId
   final int remainingSeconds;
+  final bool isLoading;
+  final String? errorMessage;
+  final String? submissionId;
 
   QuizState({
-    required this.questions,
-    required this.currentQuestionIndex,
-    required this.selectedAnswers,
-    required this.remainingSeconds,
+    this.questions = const [],
+    this.currentQuestionIndex = 0,
+    this.selectedAnswers = const {},
+    this.remainingSeconds = 0,
+    this.isLoading = false,
+    this.errorMessage,
+    this.submissionId,
   });
 
   QuizState copyWith({
+    List<Question>? questions,
     int? currentQuestionIndex,
     Map<String, String>? selectedAnswers,
     int? remainingSeconds,
+    bool? isLoading,
+    String? errorMessage,
+    String? submissionId,
   }) {
     return QuizState(
-      questions: questions,
+      questions: questions ?? this.questions,
       currentQuestionIndex: currentQuestionIndex ?? this.currentQuestionIndex,
       selectedAnswers: selectedAnswers ?? this.selectedAnswers,
       remainingSeconds: remainingSeconds ?? this.remainingSeconds,
+      isLoading: isLoading ?? this.isLoading,
+      errorMessage: errorMessage ?? this.errorMessage,
+      submissionId: submissionId ?? this.submissionId,
     );
   }
 }
 
 // --- State Notifier --- 
 class QuizNotifier extends StateNotifier<QuizState> {
+  final QuizRepository _repository;
   Timer? _timer;
 
-  QuizNotifier() : super(QuizState(
-    questions: mockQuestions, // Start with mock questions
-    currentQuestionIndex: 0,
-    selectedAnswers: {},
-    remainingSeconds: 15 * 60, // 15 minutes
-  )) {
-    _startTimer();
+  QuizNotifier(this._repository) : super(QuizState());
+
+  // Bắt đầu bài thi thật từ API
+  Future<void> startQuiz(String contestId, String studentId) async {
+    state = state.copyWith(isLoading: true, errorMessage: null);
+    try {
+      // 1. Gọi API để bắt đầu cuộc thi
+      final submissionData = await _repository.startSubmission(contestId, studentId);
+      final submissionId = (submissionData['id'] ?? submissionData['_id']).toString();
+      
+      // 2. Lấy danh sách câu hỏi cho cuộc thi này
+      final questions = await _repository.getQuestionsForContest(contestId);
+      
+      if (questions.isEmpty) {
+        state = state.copyWith(isLoading: false, errorMessage: 'Cuộc thi này hiện chưa có câu hỏi.');
+        return;
+      }
+
+      state = QuizState(
+        questions: questions,
+        submissionId: submissionId,
+        remainingSeconds: 45 * 60, // Tạm thời để 45p, có thể lấy từ BE nếu có
+        isLoading: false,
+      );
+      
+      _startTimer();
+    } catch (e) {
+      state = state.copyWith(isLoading: false, errorMessage: 'Không thể bắt đầu bài thi: $e');
+    }
   }
 
   void _startTimer() {
@@ -93,26 +87,29 @@ class QuizNotifier extends StateNotifier<QuizState> {
         state = state.copyWith(remainingSeconds: state.remainingSeconds - 1);
       } else {
         timer.cancel();
-        // Handle quiz timeout
+        // Xử lý nộp bài tự động khi hết giờ
       }
     });
   }
 
-  void selectAnswer(String questionId, String answerId) {
+  Future<void> selectAnswer(String questionId, String answerId) async {
     final newAnswers = Map<String, String>.from(state.selectedAnswers);
     newAnswers[questionId] = answerId;
     state = state.copyWith(selectedAnswers: newAnswers);
+
+    // Gửi đáp án về BE ngay lập tức để đồng bộ
+    if (state.submissionId != null) {
+      try {
+        await _repository.submitAnswer(state.submissionId!, questionId, answerId);
+      } catch (e) {
+        print('Error syncing answer: $e');
+      }
+    }
   }
 
   void nextQuestion() {
     if (state.currentQuestionIndex < state.questions.length - 1) {
       state = state.copyWith(currentQuestionIndex: state.currentQuestionIndex + 1);
-    }
-  }
-
-  void previousQuestion() {
-    if (state.currentQuestionIndex > 0) {
-      state = state.copyWith(currentQuestionIndex: state.currentQuestionIndex - 1);
     }
   }
 
@@ -125,16 +122,18 @@ class QuizNotifier extends StateNotifier<QuizState> {
 
 // --- Providers --- 
 final quizProvider = StateNotifierProvider<QuizNotifier, QuizState>((ref) {
-  return QuizNotifier();
+  final repository = ref.watch(quizRepositoryProvider);
+  return QuizNotifier(repository);
 });
 
-// Derived providers for easier access in UI
-final currentQuestionProvider = Provider<Question>((ref) {
+final currentQuestionProvider = Provider<Question?>((ref) {
   final quizState = ref.watch(quizProvider);
+  if (quizState.questions.isEmpty) return null;
   return quizState.questions[quizState.currentQuestionIndex];
 });
 
 final quizProgressProvider = Provider<double>((ref) {
     final quizState = ref.watch(quizProvider);
+    if (quizState.questions.isEmpty) return 0.0;
     return (quizState.currentQuestionIndex + 1) / quizState.questions.length;
 });

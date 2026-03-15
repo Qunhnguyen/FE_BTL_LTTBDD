@@ -11,7 +11,8 @@ class Subject {
 
   factory Subject.fromJson(Map<String, dynamic> json) {
     return Subject(
-      id: json['id']?.toString() ?? '',
+      // Thử lấy 'id', nếu không có thì lấy '_id' (phổ biến trong MongoDB)
+      id: (json['id'] ?? json['_id'])?.toString() ?? '',
       name: json['name'] ?? '',
       description: json['description'],
     );

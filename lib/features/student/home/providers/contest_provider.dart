@@ -1,26 +1,28 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/contest.dart';
 import '../repositories/contest_repository.dart';
+import '../../../teacher/subjects/repositories/subject_repository.dart';
 
-// Provider để lấy danh sách tất cả cuộc thi từ API
+// Provider để lấy danh sách tất cả cuộc thi
 final contestsProvider = FutureProvider<List<Contest>>((ref) async {
-  final repository = ref.watch(contestRepositoryProvider);
+  final contestRepo = ref.watch(contestRepositoryProvider);
+  final subjectRepo = ref.watch(subjectRepositoryProvider);
   
-  // Giả định backend có endpoint lấy danh sách cuộc thi cho sinh viên
-  // Nếu chưa có, bạn có thể thay thế bằng logic lấy theo subjectId
-  try {
-    // Tạm thời gọi API lấy cuộc thi (bạn có thể điều chỉnh endpoint trong repository nếu cần)
-    return await repository.getContestsBySubject("all"); 
-  } catch (e) {
-    // Trả về danh sách rỗng hoặc ném lỗi để UI xử lý
-    rethrow;
+  // Lưu ý: Nếu bị lỗi 403, nghĩa là Backend chặn Role Student truy cập link /api/admin
+  // Bạn cần kiểm tra cấu hình Security ở Backend cho các link này
+  final subjects = await subjectRepo.getSubjects();
+  List<Contest> allContests = [];
+  
+  for (var subject in subjects) {
+    final contests = await contestRepo.getContestsBySubject(subject.id);
+    allContests.addAll(contests);
   }
+  
+  return allContests;
 });
 
-// Provider quản lý tab hiện tại (Đang diễn ra, Sắp tới, Đã kết thúc)
 final contestStatusFilterProvider = StateProvider<ContestStatus>((ref) => ContestStatus.live);
 
-// Provider để lọc danh sách cuộc thi dựa trên tab đang chọn
 final filteredContestsProvider = Provider<AsyncValue<List<Contest>>>((ref) {
   final filter = ref.watch(contestStatusFilterProvider);
   final contestsAsync = ref.watch(contestsProvider);

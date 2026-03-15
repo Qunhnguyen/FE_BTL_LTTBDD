@@ -1,14 +1,14 @@
 class AppEnv {
   AppEnv._();
 
-  // Sử dụng IP mạng nội bộ để điện thoại thật có thể kết nối tới Backend trên máy tính
-  // IP hiện tại từ ipconfig: 192.168.0.104
+  // 10.0.2.2 là IP đặc biệt để Android Emulator truy cập localhost của máy tính
   static const String apiBaseUrl = String.fromEnvironment(
     'API_BASE_URL',
-    defaultValue: 'http://192.168.0.104:8080',
+    defaultValue: 'http://10.0.2.2:8080',
   );
 
   static const String appName = 'Quiz System';
 
   static bool get hasValidBaseUrl => apiBaseUrl.isNotEmpty;
 }
+
