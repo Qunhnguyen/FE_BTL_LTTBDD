@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import '../../../../core/router/app_router.dart';
 import '../providers/quiz_provider.dart';
+import '../providers/quiz_result_provider.dart';
 import '../models/question.dart';
 import '../../../auth/providers/auth_provider.dart';
 
@@ -14,89 +16,218 @@ class QuizScreen extends ConsumerStatefulWidget {
 }
 
 class _QuizScreenState extends ConsumerState<QuizScreen> {
+  bool _navigatedToResult = false;
+
   @override
   void initState() {
     super.initState();
-    // Bắt đầu tải bài thi ngay khi mở màn hình
-    Future.microtask(() {
-      final authState = ref.read(authProvider);
-      if (authState.user != null) {
-        ref.read(quizProvider.notifier).startQuiz(widget.contestId, authState.user!.id);
+    _initQuiz();
+  }
+
+  void _initQuiz() {
+    // Sử dụng microtask để tránh lỗi build conflict
+    Future.microtask(() async {
+      if (!mounted) return;
+      final user = await ref.read(authProvider.notifier).ensureCurrentUser();
+      if (!mounted) return;
+      if (user != null) {
+        ref.read(quizProvider.notifier).startQuiz(widget.contestId, user.id);
+      } else {
+        context.go('/');
       }
     });
   }
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
+    ref.listen(quizResultProvider, (previous, next) {
+      if (next == null || _navigatedToResult || !mounted) {
+        return;
+      }
+
+      _navigatedToResult = true;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) {
+          return;
+        }
+
+        context.pushReplacementNamed(AppRouteNames.studentResult);
+      });
+    });
+
     final quizState = ref.watch(quizProvider);
     final currentQuestion = ref.watch(currentQuestionProvider);
     final progress = ref.watch(quizProgressProvider);
+    final isLastQuestion = currentQuestion != null &&
+        quizState.currentQuestionIndex == quizState.questions.length - 1;
 
+    return WillPopScope(
+      onWillPop: _handleWillPop,
+      child: Scaffold(
+        appBar: AppBar(
+          leading: IconButton(
+            icon: const Icon(Icons.close),
+            onPressed: () async {
+              final shouldPop = await _handleWillPop();
+              if (shouldPop && context.mounted) {
+                context.pop();
+              }
+            },
+          ),
+          title: const Text('Bài thi trực tuyến', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+          centerTitle: true,
+        ),
+        body: _buildBody(quizState, currentQuestion, progress),
+        bottomSheet: currentQuestion != null 
+            ? _QuizBottomBar(
+                isLastQuestion: isLastQuestion,
+                isSubmitting: quizState.isSubmitting,
+                onNext: () => ref.read(quizProvider.notifier).nextQuestion(),
+                onFinish: _submitQuiz,
+              )
+            : null,
+      ),
+    );
+  }
+
+  Future<bool> _handleWillPop() async {
+    final shouldPop = await _showExitConfirmation(context);
+    return shouldPop == true;
+  }
+
+  Future<void> _submitQuiz() async {
+    final shouldFinish = await _showFinishConfirmation(context);
+    if (shouldFinish != true || !mounted) {
+      return;
+    }
+
+    await ref.read(quizProvider.notifier).finishQuiz();
+  }
+
+  Widget _buildBody(QuizState quizState, Question? currentQuestion, double progress) {
     if (quizState.isLoading) {
-      return const Scaffold(body: Center(child: CircularProgressIndicator()));
+      return const Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            CircularProgressIndicator(),
+            SizedBox(height: 16),
+            Text('Đang tải câu hỏi...'),
+          ],
+        ),
+      );
     }
 
     if (quizState.errorMessage != null) {
-      return Scaffold(
-        body: Center(
-          child: Padding(
-            padding: const EdgeInsets.all(24.0),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                const Icon(Icons.error_outline, size: 64, color: Colors.red),
-                const SizedBox(height: 16),
-                Text(quizState.errorMessage!, textAlign: TextAlign.center),
-                const SizedBox(height: 24),
-                ElevatedButton(onPressed: () => context.pop(), child: const Text('Quay lại')),
-              ],
-            ),
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.all(24.0),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Icon(Icons.error_outline, size: 64, color: Colors.red),
+              const SizedBox(height: 16),
+              Text(
+                quizState.errorMessage ?? 'Đã có lỗi xảy ra',
+                textAlign: TextAlign.center,
+                style: const TextStyle(fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 24),
+              ElevatedButton(
+                onPressed: () => context.pop(),
+                child: const Text('Quay lại trang chủ'),
+              ),
+            ],
           ),
         ),
       );
     }
 
     if (currentQuestion == null) {
-      return const Scaffold(body: Center(child: Text('Không có dữ liệu câu hỏi.')));
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(Icons.quiz_outlined, size: 64, color: Colors.grey),
+            const SizedBox(height: 16),
+            const Text('Không tìm thấy dữ liệu câu hỏi.'),
+            const SizedBox(height: 24),
+            OutlinedButton(
+              onPressed: () => context.pop(),
+              child: const Text('Quay lại'),
+            ),
+          ],
+        ),
+      );
     }
 
-    return Scaffold(
-      appBar: AppBar(
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
-          onPressed: () => context.pop(),
-        ),
-        title: const Text('Đang làm bài thi', style: TextStyle(fontWeight: FontWeight.bold)),
-        centerTitle: true,
-      ),
-      body: Column(
-        children: [
-          Expanded(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: Column(
-                children: [
-                  const SizedBox(height: 16),
-                  _TimerSection(remainingSeconds: quizState.remainingSeconds),
-                  const SizedBox(height: 24),
-                  _ProgressBar(progress: progress, currentIndex: quizState.currentQuestionIndex + 1, total: quizState.questions.length),
-                  const SizedBox(height: 24),
-                  _QuestionCard(question: currentQuestion, index: quizState.currentQuestionIndex + 1),
-                  const SizedBox(height: 24),
-                  _AnswersList(
-                    question: currentQuestion,
-                    selectedAnswerId: quizState.selectedAnswers[currentQuestion.id],
-                    onSelect: (id) => ref.read(quizProvider.notifier).selectAnswer(currentQuestion.id, id),
-                  ),
-                  const SizedBox(height: 100),
-                ],
-              ),
+    return Column(
+      children: [
+        Expanded(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: Column(
+              children: [
+                const SizedBox(height: 16),
+                _TimerSection(remainingSeconds: quizState.remainingSeconds),
+                const SizedBox(height: 24),
+                _ProgressBar(
+                  progress: progress, 
+                  currentIndex: quizState.currentQuestionIndex + 1, 
+                  total: quizState.questions.length
+                ),
+                const SizedBox(height: 24),
+                _QuestionCard(question: currentQuestion, index: quizState.currentQuestionIndex + 1),
+                const SizedBox(height: 24),
+                _AnswersList(
+                  question: currentQuestion,
+                  selectedAnswerId: quizState.selectedAnswers[currentQuestion.id],
+                  onSelect: (id) => ref.read(quizProvider.notifier).selectAnswer(currentQuestion.id, id),
+                ),
+                const SizedBox(height: 100),
+              ],
             ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Future<bool?> _showExitConfirmation(BuildContext context) {
+    return showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Thoát bài thi?'),
+        content: const Text('Tiến độ của bạn đã được lưu lại. Bạn có chắc chắn muốn thoát không?'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Tiếp tục thi')),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+            child: const Text('Thoát', style: TextStyle(color: Colors.white)),
           ),
         ],
       ),
-      bottomSheet: _PowerUpsBar(onNext: () => ref.read(quizProvider.notifier).nextQuestion()),
+    );
+  }
+
+  Future<bool?> _showFinishConfirmation(BuildContext context) {
+    return showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Nộp bài thi?'),
+        content: const Text('Bạn có muốn kết thúc bài thi và xem kết quả ngay bây giờ không?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Tiếp tục làm'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Nộp bài'),
+          ),
+        ],
+      ),
     );
   }
 }
@@ -123,7 +254,7 @@ class _ProgressBar extends StatelessWidget {
         const SizedBox(height: 8),
         LinearProgressIndicator(
           value: progress,
-          backgroundColor: Colors.grey[200],
+          backgroundColor: (Colors.grey[200] ?? Colors.grey),
           valueColor: AlwaysStoppedAnimation<Color>(theme.colorScheme.primary),
           minHeight: 8,
           borderRadius: BorderRadius.circular(4),
@@ -145,9 +276,10 @@ class _QuestionCard extends StatelessWidget {
       width: double.infinity,
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Theme.of(context).cardColor,
         borderRadius: BorderRadius.circular(20),
         boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10)],
+        border: Border.all(color: Colors.grey.withOpacity(0.1)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -159,7 +291,7 @@ class _QuestionCard extends StatelessWidget {
           ),
           const SizedBox(height: 16),
           Text(
-            question.content, // Đã đổi từ 'text' sang 'content'
+            question.content,
             style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, height: 1.5),
           ),
         ],
@@ -188,7 +320,7 @@ class _AnswersList extends StatelessWidget {
             child: Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: isSelected ? Colors.blue.withOpacity(0.1) : Colors.white,
+                color: isSelected ? Colors.blue.withOpacity(0.1) : Theme.of(context).cardColor,
                 borderRadius: BorderRadius.circular(16),
                 border: Border.all(color: isSelected ? Colors.blue : (Colors.grey[200] ?? Colors.grey), width: 2),
               ),
@@ -238,21 +370,60 @@ class _TimerSection extends StatelessWidget {
   }
 }
 
-class _PowerUpsBar extends StatelessWidget {
+class _QuizBottomBar extends StatelessWidget {
+  final bool isLastQuestion;
+  final bool isSubmitting;
   final VoidCallback onNext;
-  const _PowerUpsBar({required this.onNext});
+  final Future<void> Function() onFinish;
+
+  const _QuizBottomBar({
+    required this.isLastQuestion,
+    required this.isSubmitting,
+    required this.onNext,
+    required this.onFinish,
+  });
 
   @override
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.fromLTRB(16, 12, 16, 32),
-      decoration: BoxDecoration(color: Colors.white, border: Border(top: BorderSide(color: (Colors.grey[200] ?? Colors.grey)))),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      decoration: BoxDecoration(
+        color: Theme.of(context).cardColor,
+        border: Border(top: BorderSide(color: (Colors.grey[200] ?? Colors.grey))),
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
         children: [
-          _PowerUpButton(icon: Icons.hdr_strong, label: '50/50', color: Colors.purple, onTap: () {}),
-          _PowerUpButton(icon: Icons.skip_next, label: 'Bỏ qua', color: Colors.amber, onTap: onNext),
-          _PowerUpButton(icon: Icons.groups, label: 'Khán giả', color: Colors.blue, onTap: () {}),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              _PowerUpButton(icon: Icons.hdr_strong, label: '50/50', color: Colors.purple, onTap: () {}),
+              _PowerUpButton(icon: Icons.skip_next, label: 'Bỏ qua', color: Colors.amber, onTap: onNext),
+              _PowerUpButton(icon: Icons.groups, label: 'Khán giả', color: Colors.blue, onTap: () {}),
+            ],
+          ),
+          const SizedBox(height: 12),
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton(
+              onPressed: isSubmitting
+                  ? null
+                  : () async {
+                      if (isLastQuestion) {
+                        await onFinish();
+                      } else {
+                        onNext();
+                      }
+                    },
+              child: isSubmitting
+                  ? const SizedBox(
+                      width: 18,
+                      height: 18,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : Text(isLastQuestion ? 'Nộp bài' : 'Câu tiếp'),
+            ),
+          ),
         ],
       ),
     );

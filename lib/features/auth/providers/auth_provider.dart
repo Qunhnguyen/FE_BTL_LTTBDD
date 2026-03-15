@@ -5,6 +5,8 @@ import '../repositories/auth_repository.dart';
 enum AuthStatus { initial, authenticating, authenticated, unauthenticated, error }
 
 class AuthState {
+  static const _unset = Object();
+
   final AuthStatus status;
   final User? user;
   final String? errorMessage;
@@ -17,13 +19,15 @@ class AuthState {
 
   AuthState copyWith({
     AuthStatus? status,
-    User? user,
-    String? errorMessage,
+    Object? user = _unset,
+    Object? errorMessage = _unset,
   }) {
     return AuthState(
       status: status ?? this.status,
-      user: user ?? this.user,
-      errorMessage: errorMessage ?? this.errorMessage,
+      user: identical(user, _unset) ? this.user : user as User?,
+      errorMessage: identical(errorMessage, _unset)
+          ? this.errorMessage
+          : errorMessage as String?,
     );
   }
 }
@@ -36,12 +40,36 @@ class AuthNotifier extends StateNotifier<AuthState> {
   }
 
   Future<void> _checkAuth() async {
-    final authenticated = await _repository.isAuthenticated();
-    if (authenticated) {
-      state = state.copyWith(status: AuthStatus.authenticated);
-    } else {
-      state = state.copyWith(status: AuthStatus.unauthenticated);
+    final user = await _repository.getCurrentUser();
+    if (user != null) {
+      state = state.copyWith(
+        status: AuthStatus.authenticated,
+        user: user,
+        errorMessage: null,
+      );
+      return;
     }
+
+    state = AuthState(status: AuthStatus.unauthenticated);
+  }
+
+  Future<User?> ensureCurrentUser() async {
+    if (state.user != null) {
+      return state.user;
+    }
+
+    final user = await _repository.getCurrentUser();
+    if (user != null) {
+      state = state.copyWith(
+        status: AuthStatus.authenticated,
+        user: user,
+        errorMessage: null,
+      );
+      return user;
+    }
+
+    state = AuthState(status: AuthStatus.unauthenticated);
+    return null;
   }
 
   Future<void> login(String email, String password, String role) async {

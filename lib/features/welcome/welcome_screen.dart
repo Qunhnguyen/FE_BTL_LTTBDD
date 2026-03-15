@@ -166,7 +166,7 @@ class WelcomeScreen extends StatelessWidget {
                   Column(
                     children: [
                       ElevatedButton(
-                        onPressed: () => context.push(AppRouteNames.login),
+                        onPressed: () => context.pushNamed(AppRouteNames.login),
                         child: Row(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: const [
@@ -178,7 +178,7 @@ class WelcomeScreen extends StatelessWidget {
                       ),
                       const SizedBox(height: 12),
                       TextButton(
-                        onPressed: () => context.push(AppRouteNames.login),
+                        onPressed: () => context.pushNamed(AppRouteNames.login),
                         style: TextButton.styleFrom(
                           minimumSize: const Size.fromHeight(48),
                         ),

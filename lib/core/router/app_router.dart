@@ -33,24 +33,24 @@ final _teacherSettingsKey = GlobalKey<NavigatorState>();
 class AppRouteNames {
   AppRouteNames._();
 
-  static const String welcome = '/';
-  static const String login = '/login';
-  static const String roleSelection = '/roles';
+  static const String welcome = 'welcome';
+  static const String login = 'login';
+  static const String roleSelection = 'roles';
 
   // Student
-  static const String studentHome = '/student/home';
-  static const String studentHistory = '/student/history';
-  static const String studentQuiz = 'quiz/:contestId';
-  static const String studentResult = 'result';
-  static const String studentLeaderboard = '/student/leaderboard';
-  static const String studentProfile = '/student/profile';
+  static const String studentHome = 'studentHome';
+  static const String studentHistory = 'studentHistory';
+  static const String studentQuiz = 'studentQuiz';
+  static const String studentResult = 'studentResult';
+  static const String studentLeaderboard = 'studentLeaderboard';
+  static const String studentProfile = 'studentProfile';
 
   // Teacher
-  static const String teacherDashboard = '/teacher/dashboard';
-  static const String teacherSubjects = '/teacher/subjects';
-  static const String teacherContests = 'contests';
-  static const String teacherQuestions = '/teacher/questions';
-  static const String teacherSettings = '/teacher/settings';
+  static const String teacherDashboard = 'teacherDashboard';
+  static const String teacherSubjects = 'teacherSubjects';
+  static const String teacherContests = 'teacherContests';
+  static const String teacherQuestions = 'teacherQuestions';
+  static const String teacherSettings = 'teacherSettings';
 }
 
 final routerProvider = Provider<GoRouter>((ref) {
@@ -58,41 +58,40 @@ final routerProvider = Provider<GoRouter>((ref) {
 
   return GoRouter(
     navigatorKey: _rootNavigatorKey,
-    initialLocation: AppRouteNames.welcome,
+    initialLocation: '/',
     
-    // Logic Redirect tự động
     redirect: (context, state) {
       final isAuthenticated = authState.status == AuthStatus.authenticated;
-      final isLoggingIn = state.matchedLocation == AppRouteNames.login;
-      final isAtWelcome = state.matchedLocation == AppRouteNames.welcome;
+      final isLoggingIn = state.matchedLocation == '/login';
+      final isAtWelcome = state.matchedLocation == '/';
 
       if (isAuthenticated && (isLoggingIn || isAtWelcome)) {
-        // Tự động điều hướng theo Role nếu đã đăng nhập thành công
         if (authState.user?.role == 'TEACHER') {
-          return AppRouteNames.teacherDashboard;
+          return '/teacher/dashboard';
         }
-        return AppRouteNames.studentHome;
+        return '/student/home';
       }
       return null;
     },
 
     routes: <RouteBase>[
       GoRoute(
-        path: AppRouteNames.welcome,
+        path: '/',
         name: AppRouteNames.welcome,
         builder: (context, state) => const WelcomeScreen(),
       ),
       GoRoute(
-        path: AppRouteNames.login,
+        path: '/login',
         name: AppRouteNames.login,
         builder: (context, state) => const LoginScreen(),
       ),
       GoRoute(
-        path: AppRouteNames.roleSelection,
+        path: '/roles',
         name: AppRouteNames.roleSelection,
         builder: (context, state) => const RoleSelectionScreen(),
       ),
-
+      
+      // Màn hình Quiz Toàn màn hình - Tách khỏi Shell để tránh lỗi log
       // Student Shell
       StatefulShellRoute.indexedStack(
         builder: (context, state, navigationShell) {
@@ -103,24 +102,18 @@ final routerProvider = Provider<GoRouter>((ref) {
             navigatorKey: _studentHomeKey,
             routes: [
               GoRoute(
-                path: AppRouteNames.studentHome,
+                path: '/student/home',
                 name: AppRouteNames.studentHome,
                 builder: (context, state) => const StudentHomeScreen(),
                 routes: [
                   GoRoute(
+                    parentNavigatorKey: _rootNavigatorKey,
                     path: 'quiz/:contestId',
                     name: AppRouteNames.studentQuiz,
                     builder: (context, state) {
                       final contestId = state.pathParameters['contestId']!;
                       return QuizScreen(contestId: contestId);
                     },
-                    routes: [
-                      GoRoute(
-                        path: AppRouteNames.studentResult,
-                        name: AppRouteNames.studentResult,
-                        builder: (context, state) => const QuizResultScreen(),
-                      ),
-                    ],
                   ),
                 ],
               ),
@@ -130,7 +123,7 @@ final routerProvider = Provider<GoRouter>((ref) {
             navigatorKey: _studentHistoryKey,
             routes: [
               GoRoute(
-                path: AppRouteNames.studentHistory,
+                path: '/student/history',
                 name: AppRouteNames.studentHistory,
                 builder: (context, state) => const QuizHistoryScreen(),
               ),
@@ -140,7 +133,7 @@ final routerProvider = Provider<GoRouter>((ref) {
             navigatorKey: _studentLeaderboardKey,
             routes: [
               GoRoute(
-                path: AppRouteNames.studentLeaderboard,
+                path: '/student/leaderboard',
                 name: AppRouteNames.studentLeaderboard,
                 builder: (context, state) => const LeaderboardScreen(),
               ),
@@ -150,13 +143,19 @@ final routerProvider = Provider<GoRouter>((ref) {
             navigatorKey: _studentProfileKey,
             routes: [
               GoRoute(
-                path: AppRouteNames.studentProfile,
+                path: '/student/profile',
                 name: AppRouteNames.studentProfile,
                 builder: (context, state) => const StudentProfileScreen(),
               ),
             ],
           ),
         ],
+      ),
+      GoRoute(
+        parentNavigatorKey: _rootNavigatorKey,
+        path: '/student/result',
+        name: AppRouteNames.studentResult,
+        builder: (context, state) => const QuizResultScreen(),
       ),
 
       // Teacher Shell
@@ -169,7 +168,7 @@ final routerProvider = Provider<GoRouter>((ref) {
             navigatorKey: _teacherDashboardKey,
             routes: [
               GoRoute(
-                path: AppRouteNames.teacherDashboard,
+                path: '/teacher/dashboard',
                 name: AppRouteNames.teacherDashboard,
                 builder: (context, state) => const TeacherDashboardScreen(),
               ),
@@ -179,7 +178,7 @@ final routerProvider = Provider<GoRouter>((ref) {
             navigatorKey: _teacherSubjectsKey,
             routes: [
               GoRoute(
-                path: AppRouteNames.teacherSubjects,
+                path: '/teacher/subjects',
                 name: AppRouteNames.teacherSubjects,
                 builder: (context, state) => const SubjectManagementScreen(),
                 routes: [
@@ -202,7 +201,7 @@ final routerProvider = Provider<GoRouter>((ref) {
             navigatorKey: _teacherQuestionsKey,
             routes: [
               GoRoute(
-                path: AppRouteNames.teacherQuestions,
+                path: '/teacher/questions',
                 name: AppRouteNames.teacherQuestions,
                 builder: (context, state) => const QuestionManagementScreen(),
               ),
@@ -212,7 +211,7 @@ final routerProvider = Provider<GoRouter>((ref) {
             navigatorKey: _teacherSettingsKey,
             routes: [
               GoRoute(
-                path: AppRouteNames.teacherSettings,
+                path: '/teacher/settings',
                 name: AppRouteNames.teacherSettings,
                 builder: (context, state) => const TeacherSettingsScreen(),
               ),
