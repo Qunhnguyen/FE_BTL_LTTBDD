@@ -74,7 +74,7 @@ class QuizResultScreen extends ConsumerWidget {
                         ),
                         boxShadow: [
                           BoxShadow(
-                            color: theme.colorScheme.primary.withOpacity(0.3),
+                            color: theme.colorScheme.primary.withValues(alpha: 0.3),
                             blurRadius: 20,
                             offset: const Offset(0, 10),
                           ),
@@ -107,7 +107,7 @@ class QuizResultScreen extends ConsumerWidget {
                 width: double.infinity,
                 padding: const EdgeInsets.all(24),
                 decoration: BoxDecoration(
-                  color: isDark ? Colors.white.withOpacity(0.05) : Colors.grey[50],
+                  color: isDark ? Colors.white.withValues(alpha: 0.05) : Colors.grey[50],
                   borderRadius: BorderRadius.circular(24),
                   border: Border.all(color: isDark ? Colors.white10 : Colors.grey[200]!),
                 ),
@@ -268,7 +268,7 @@ class _SecondaryButton extends StatelessWidget {
       child: Container(
         height: 48,
         decoration: BoxDecoration(
-          color: isDark ? Colors.white.withOpacity(0.05) : Colors.grey[100],
+          color: isDark ? Colors.white.withValues(alpha: 0.05) : Colors.grey[100],
           borderRadius: BorderRadius.circular(12),
         ),
         child: Row(

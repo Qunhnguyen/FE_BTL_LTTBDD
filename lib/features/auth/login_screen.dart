@@ -71,7 +71,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 child: Container(
                   padding: const EdgeInsets.all(24),
                   decoration: BoxDecoration(
-                    color: theme.colorScheme.primary.withOpacity(0.1),
+                    color: theme.colorScheme.primary.withValues(alpha: 0.1),
                     shape: BoxShape.circle,
                   ),
                   child: Icon(
@@ -132,7 +132,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                       prefixIcon: const Icon(Icons.person_outline),
                       filled: true,
                       fillColor: theme.brightness == Brightness.dark
-                          ? Colors.white.withOpacity(0.05)
+                          ? Colors.white.withValues(alpha: 0.05)
                           : Colors.grey[100],
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12),
@@ -162,7 +162,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                       ),
                       filled: true,
                       fillColor: theme.brightness == Brightness.dark
-                          ? Colors.white.withOpacity(0.05)
+                          ? Colors.white.withValues(alpha: 0.05)
                           : Colors.grey[100],
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12),
@@ -266,7 +266,7 @@ class _SegmentButton extends StatelessWidget {
           boxShadow: isSelected
               ? [
                   BoxShadow(
-                    color: Colors.black.withOpacity(0.05),
+                    color: Colors.black.withValues(alpha: 0.05),
                     blurRadius: 4,
                     offset: const Offset(0, 2),
                   )

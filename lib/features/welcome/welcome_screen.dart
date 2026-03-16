@@ -30,8 +30,8 @@ class WelcomeScreen extends StatelessWidget {
               decoration: BoxDecoration(
                 gradient: RadialGradient(
                   colors: [
-                    theme.colorScheme.primary.withOpacity(0.2),
-                    Colors.teal.withOpacity(0.2),
+                    theme.colorScheme.primary.withValues(alpha: 0.2),
+                    Colors.teal.withValues(alpha: 0.2),
                     Colors.transparent,
                   ],
                 ),
@@ -47,8 +47,8 @@ class WelcomeScreen extends StatelessWidget {
               decoration: BoxDecoration(
                 gradient: RadialGradient(
                   colors: [
-                    Colors.blue.withOpacity(0.2),
-                    theme.colorScheme.primary.withOpacity(0.2),
+                    Colors.blue.withValues(alpha: 0.2),
+                    theme.colorScheme.primary.withValues(alpha: 0.2),
                     Colors.transparent,
                   ],
                 ),
@@ -109,10 +109,10 @@ class WelcomeScreen extends StatelessWidget {
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
                         decoration: BoxDecoration(
-                          color: theme.colorScheme.primary.withOpacity(0.1),
+                          color: theme.colorScheme.primary.withValues(alpha: 0.1),
                           borderRadius: BorderRadius.circular(20),
                           border: Border.all(
-                            color: theme.colorScheme.primary.withOpacity(0.2),
+                            color: theme.colorScheme.primary.withValues(alpha: 0.2),
                           ),
                         ),
                         child: Row(
@@ -233,12 +233,12 @@ class _FloatingIcon extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
+        color: color.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: color.withOpacity(0.2)),
+        border: Border.all(color: color.withValues(alpha: 0.2)),
         boxShadow: [
           BoxShadow(
-            color: color.withOpacity(0.1),
+            color: color.withValues(alpha: 0.1),
             blurRadius: 10,
             offset: const Offset(0, 4),
           ),

@@ -29,7 +29,7 @@ class StudentProfileScreen extends ConsumerWidget {
                   children: [
                     CircleAvatar(
                       radius: 50,
-                      backgroundColor: theme.colorScheme.primary.withOpacity(0.1),
+                      backgroundColor: theme.colorScheme.primary.withValues(alpha: 0.1),
                       child: Icon(
                         Icons.person,
                         size: 50,
@@ -55,21 +55,25 @@ class StudentProfileScreen extends ConsumerWidget {
                 icon: Icons.person_outline,
                 label: 'Chỉnh sửa thông tin',
                 onTap: () {},
+                isDark: theme.brightness == Brightness.dark,
               ),
               _buildProfileOption(
                 icon: Icons.notifications_none,
                 label: 'Thông báo',
                 onTap: () {},
+                isDark: theme.brightness == Brightness.dark,
               ),
               _buildProfileOption(
                 icon: Icons.security,
                 label: 'Bảo mật',
                 onTap: () {},
+                isDark: theme.brightness == Brightness.dark,
               ),
               _buildProfileOption(
                 icon: Icons.help_outline,
                 label: 'Trợ giúp & Hỗ trợ',
                 onTap: () {},
+                isDark: theme.brightness == Brightness.dark,
               ),
               const Divider(height: 32),
 
@@ -79,7 +83,7 @@ class StudentProfileScreen extends ConsumerWidget {
                 leading: Container(
                   padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(
-                    color: Colors.red.withOpacity(0.1),
+                    color: Colors.red.withValues(alpha: 0.1),
                     shape: BoxShape.circle,
                   ),
                   child: const Icon(Icons.logout, color: Colors.red),
@@ -102,16 +106,17 @@ class StudentProfileScreen extends ConsumerWidget {
     required IconData icon,
     required String label,
     required VoidCallback onTap,
+    bool isDark = false,
   }) {
     return ListTile(
       onTap: onTap,
       leading: Container(
         padding: const EdgeInsets.all(8),
         decoration: BoxDecoration(
-          color: Colors.grey.withOpacity(0.1),
+          color: Colors.grey.withValues(alpha: 0.1),
           shape: BoxShape.circle,
         ),
-        child: Icon(icon, color: Colors.black87),
+        child: Icon(icon, color: isDark ? Colors.white70 : Colors.black87),
       ),
       title: Text(label, style: const TextStyle(fontWeight: FontWeight.w500)),
       trailing: const Icon(Icons.chevron_right, size: 20),

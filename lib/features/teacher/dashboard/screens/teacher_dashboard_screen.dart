@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
+import '../../../../core/router/app_router.dart';
 import '../providers/dashboard_provider.dart';
 import '../models/recent_exam.dart';
 
@@ -27,7 +29,7 @@ class TeacherDashboardScreen extends ConsumerWidget {
                       height: 44,
                       width: 44,
                       decoration: BoxDecoration(
-                        color: theme.colorScheme.primary.withOpacity(0.2),
+                        color: theme.colorScheme.primary.withValues(alpha: 0.2),
                         shape: BoxShape.circle,
                       ),
                       child: Icon(Icons.dashboard_outlined,
@@ -70,9 +72,9 @@ class TeacherDashboardScreen extends ConsumerWidget {
                       decoration: BoxDecoration(
                         gradient: LinearGradient(
                           colors: [
-                            theme.colorScheme.primary.withOpacity(0.2),
+                            theme.colorScheme.primary.withValues(alpha: 0.2),
                             isDark
-                                ? Colors.white.withOpacity(0.05)
+                                ? Colors.white.withValues(alpha: 0.05)
                                 : Colors.white,
                           ],
                           begin: Alignment.topLeft,
@@ -80,7 +82,7 @@ class TeacherDashboardScreen extends ConsumerWidget {
                         ),
                         borderRadius: BorderRadius.circular(20),
                         border: Border.all(
-                            color: theme.colorScheme.primary.withOpacity(0.1)),
+                            color: theme.colorScheme.primary.withValues(alpha: 0.1)),
                       ),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -106,7 +108,7 @@ class TeacherDashboardScreen extends ConsumerWidget {
                                 padding: const EdgeInsets.all(10),
                                 decoration: BoxDecoration(
                                   color:
-                                      theme.colorScheme.primary.withOpacity(0.1),
+                                      theme.colorScheme.primary.withValues(alpha: 0.1),
                                   borderRadius: BorderRadius.circular(12),
                                 ),
                                 child: Icon(Icons.quiz_outlined,
@@ -121,7 +123,7 @@ class TeacherDashboardScreen extends ConsumerWidget {
                                 padding: const EdgeInsets.symmetric(
                                     horizontal: 8, vertical: 4),
                                 decoration: BoxDecoration(
-                                  color: Colors.green.withOpacity(0.1),
+                                  color: Colors.green.withValues(alpha: 0.1),
                                   borderRadius: BorderRadius.circular(8),
                                 ),
                                 child: Row(
@@ -189,13 +191,13 @@ class TeacherDashboardScreen extends ConsumerWidget {
                       icon: Icons.add_circle_outline,
                       label: 'Tạo bài thi',
                       isPrimary: true,
-                      onTap: () {},
+                      onTap: () => context.go('/teacher/subjects'),
                     ),
                     const SizedBox(width: 12),
                     _ActionButton(
                       icon: Icons.library_add_outlined,
                       label: 'Tạo môn học',
-                      onTap: () {},
+                      onTap: () => context.go('/teacher/subjects'),
                     ),
                     const SizedBox(width: 12),
                     _ActionButton(
@@ -261,7 +263,7 @@ class _SmallStatCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: isDark ? Colors.white.withOpacity(0.05) : Colors.white,
+        color: isDark ? Colors.white.withValues(alpha: 0.05) : Colors.white,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: isDark ? Colors.white10 : Colors.grey[200]!),
       ),
@@ -271,7 +273,7 @@ class _SmallStatCard extends StatelessWidget {
           Container(
             padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
-              color: color.withOpacity(0.1),
+              color: color.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(10),
             ),
             child: Icon(icon, color: color, size: 20),
@@ -315,7 +317,7 @@ class _ActionButton extends StatelessWidget {
       style: ElevatedButton.styleFrom(
         backgroundColor: isPrimary
             ? theme.colorScheme.primary
-            : (isDark ? Colors.white.withOpacity(0.05) : Colors.white),
+            : (isDark ? Colors.white.withValues(alpha: 0.05) : Colors.white),
         foregroundColor: isPrimary
             ? Colors.black
             : (isDark ? Colors.white70 : Colors.black87),
@@ -368,7 +370,7 @@ class _ExamListItem extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: isDark ? Colors.white.withOpacity(0.05) : Colors.white,
+        color: isDark ? Colors.white.withValues(alpha: 0.05) : Colors.white,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: isDark ? Colors.white10 : Colors.grey[200]!),
       ),
@@ -379,7 +381,7 @@ class _ExamListItem extends StatelessWidget {
             width: 48,
             alignment: Alignment.center,
             decoration: BoxDecoration(
-              color: categoryColor.withOpacity(0.1),
+              color: categoryColor.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(12),
             ),
             child: Text(
