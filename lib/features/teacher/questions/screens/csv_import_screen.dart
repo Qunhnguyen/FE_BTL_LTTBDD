@@ -59,10 +59,10 @@ class CsvImportScreen extends ConsumerWidget {
                   width: double.infinity,
                   padding: const EdgeInsets.symmetric(vertical: 40, horizontal: 20),
                   decoration: BoxDecoration(
-                    color: isDark ? Colors.white.withOpacity(0.05) : Colors.grey[50],
+                    color: isDark ? Colors.white.withValues(alpha: 0.05) : Colors.grey[50],
                     borderRadius: BorderRadius.circular(16),
                     border: Border.all(
-                      color: theme.colorScheme.primary.withOpacity(0.3),
+                      color: theme.colorScheme.primary.withValues(alpha: 0.3),
                       width: 2,
                       style: BorderStyle.solid,
                     ),
@@ -72,7 +72,7 @@ class CsvImportScreen extends ConsumerWidget {
                       Container(
                         padding: const EdgeInsets.all(16),
                         decoration: BoxDecoration(
-                          color: theme.colorScheme.primary.withOpacity(0.1),
+                          color: theme.colorScheme.primary.withValues(alpha: 0.1),
                           shape: BoxShape.circle,
                         ),
                         child: Icon(Icons.cloud_upload_outlined, size: 40, color: theme.colorScheme.primary),
@@ -104,12 +104,12 @@ class CsvImportScreen extends ConsumerWidget {
                 Container(
                   padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
-                    color: isDark ? Colors.white.withOpacity(0.05) : Colors.white,
+                    color: isDark ? Colors.white.withValues(alpha: 0.05) : Colors.white,
                     borderRadius: BorderRadius.circular(16),
                     border: Border.all(color: isDark ? Colors.white10 : Colors.grey[200]!),
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.black.withOpacity(0.05),
+                        color: Colors.black.withValues(alpha: 0.05),
                         blurRadius: 10,
                         offset: const Offset(0, 4),
                       ),
@@ -122,7 +122,7 @@ class CsvImportScreen extends ConsumerWidget {
                         width: 48,
                         height: 48,
                         decoration: BoxDecoration(
-                          color: Colors.green.withOpacity(0.1),
+                          color: Colors.green.withValues(alpha: 0.1),
                           borderRadius: BorderRadius.circular(8),
                         ),
                         child: const Icon(Icons.description_outlined, color: Colors.green),

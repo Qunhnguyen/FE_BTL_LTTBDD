@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 import '../models/quiz_history_entry.dart';
 import '../providers/quiz_history_provider.dart';
 
@@ -24,21 +23,10 @@ class QuizHistoryScreen extends ConsumerWidget {
               padding: const EdgeInsets.fromLTRB(16, 20, 16, 12),
               child: Column(
                 children: [
-                  Row(
-                    children: [
-                      IconButton(
-                        onPressed: () => context.pop(),
-                        icon: const Icon(Icons.arrow_back),
-                      ),
-                      const Expanded(
-                        child: Text(
-                          'Lịch sử Làm bài',
-                          textAlign: TextAlign.center,
-                          style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                        ),
-                      ),
-                      const SizedBox(width: 48),
-                    ],
+                  const Text(
+                    'Lịch sử Làm bài',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                   ),
                   const SizedBox(height: 16),
                   SingleChildScrollView(
@@ -145,7 +133,7 @@ class _HistoryCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: isDark ? Colors.white.withOpacity(0.05) : Colors.white,
+        color: isDark ? Colors.white.withValues(alpha: 0.05) : Colors.white,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: isDark ? Colors.white10 : (Colors.grey[200] ?? Colors.grey)),
       ),
@@ -157,7 +145,7 @@ class _HistoryCard extends StatelessWidget {
                 width: 48,
                 height: 48,
                 decoration: BoxDecoration(
-                  color: (isLowScore ? Colors.red : entry.color).withOpacity(0.1),
+                  color: (isLowScore ? Colors.red : entry.color).withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Icon(entry.icon, color: isLowScore ? Colors.red : entry.color, size: 28),
@@ -177,7 +165,7 @@ class _HistoryCard extends StatelessWidget {
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                   decoration: BoxDecoration(
-                    color: (isLowScore ? Colors.red : Colors.green).withOpacity(0.1),
+                    color: (isLowScore ? Colors.red : Colors.green).withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(6),
                   ),
                   child: Text(

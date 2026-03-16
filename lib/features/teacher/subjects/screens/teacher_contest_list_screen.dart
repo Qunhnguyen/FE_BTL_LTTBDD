@@ -31,13 +31,39 @@ class TeacherContestListScreen extends ConsumerWidget {
         data: (contests) {
           if (contests.isEmpty) {
             return Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(Icons.event_note_outlined, size: 64, color: (Colors.grey[300] ?? Colors.grey)),
-                  const SizedBox(height: 16),
-                  const Text('Chưa có cuộc thi nào cho môn học này.'),
-                ],
+              child: Padding(
+                padding: const EdgeInsets.all(40),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(24),
+                      decoration: BoxDecoration(
+                        color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.08),
+                        shape: BoxShape.circle,
+                      ),
+                      child: Icon(Icons.event_note_outlined, size: 64, color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.4)),
+                    ),
+                    const SizedBox(height: 24),
+                    const Text('Chưa có cuộc thi nào', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
+                    const SizedBox(height: 8),
+                    const Text(
+                      'Tạo cuộc thi đầu tiên cho môn học này\nđể sinh viên có thể tham gia.',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(color: Colors.grey, fontSize: 14, height: 1.5),
+                    ),
+                    const SizedBox(height: 24),
+                    ElevatedButton.icon(
+                      onPressed: () => _showAddContestSheet(context, ref, subject.id),
+                      icon: const Icon(Icons.add),
+                      label: const Text('Tạo cuộc thi đầu tiên'),
+                      style: ElevatedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      ),
+                    ),
+                  ],
+                ),
               ),
             );
           }
@@ -65,7 +91,7 @@ class TeacherContestListScreen extends ConsumerWidget {
                           icon: const Icon(Icons.quiz_outlined, size: 18),
                           label: const Text('Quản lý Câu hỏi'),
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: Theme.of(context).colorScheme.primary.withOpacity(0.1),
+                            backgroundColor: Theme.of(context).colorScheme.primary.withValues(alpha: 0.1),
                             foregroundColor: Theme.of(context).colorScheme.primary,
                             elevation: 0,
                           ),
@@ -86,7 +112,7 @@ class TeacherContestListScreen extends ConsumerWidget {
         error: (err, stack) => Center(child: Text('Lỗi: $err')),
       ),
       floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => _showAddContestDialog(context, ref, subject.id),
+        onPressed: () => _showAddContestSheet(context, ref, subject.id),
         label: const Text('Tạo cuộc thi'),
         icon: const Icon(Icons.add),
       ),
@@ -118,51 +144,129 @@ class TeacherContestListScreen extends ConsumerWidget {
     }
   }
 
-  void _showAddContestDialog(BuildContext context, WidgetRef ref, String subjectId) {
+  void _showAddContestSheet(BuildContext context, WidgetRef ref, String subjectId) {
     final titleController = TextEditingController();
     final descController = TextEditingController();
     final durationController = TextEditingController(text: '45');
+    final formKey = GlobalKey<FormState>();
 
-    showDialog(
+    showModalBottomSheet(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Tạo cuộc thi mới'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TextField(controller: titleController, decoration: const InputDecoration(labelText: 'Tên cuộc thi')),
-            TextField(controller: descController, decoration: const InputDecoration(labelText: 'Mô tả')),
-            TextField(
-              controller: durationController,
-              decoration: const InputDecoration(labelText: 'Thời gian (phút)'),
-              keyboardType: TextInputType.number,
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Hủy')),
-          ElevatedButton(
-            onPressed: () async {
-              if (titleController.text.isNotEmpty) {
-                try {
-                  await ref.read(contestRepositoryProvider).createContest(subjectId, {
-                    'name': titleController.text,
-                    'description': descController.text,
-                    'durationMinutes': int.tryParse(durationController.text) ?? 45,
-                    'status': 'UPCOMING',
-                  });
-                  ref.invalidate(contestsBySubjectProvider(subjectId));
-                  if (context.mounted) Navigator.pop(context);
-                } catch (e) {
-                  if (context.mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Lỗi: $e'), backgroundColor: Colors.red));
-                  }
-                }
-              }
-            },
-            child: const Text('Tạo'),
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (context) => Padding(
+        padding: EdgeInsets.fromLTRB(24, 16, 24, MediaQuery.of(context).viewInsets.bottom + 24),
+        child: Form(
+          key: formKey,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Center(
+                child: Container(
+                  width: 40, height: 4,
+                  decoration: BoxDecoration(color: Colors.grey[300], borderRadius: BorderRadius.circular(2)),
+                ),
+              ),
+              const SizedBox(height: 20),
+              Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Icon(Icons.add_circle_outline, color: Theme.of(context).colorScheme.primary),
+                  ),
+                  const SizedBox(width: 12),
+                  const Text('Tạo Cuộc thi Mới', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+                ],
+              ),
+              const SizedBox(height: 24),
+              TextFormField(
+                controller: titleController,
+                autofocus: true,
+                decoration: InputDecoration(
+                  labelText: 'Tên cuộc thi *',
+                  hintText: 'VD: Giữa kỳ lập trình Java',
+                  prefixIcon: const Icon(Icons.assignment_outlined),
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                  filled: true,
+                ),
+                validator: (val) => val == null || val.isEmpty ? 'Vui lòng nhập tên cuộc thi' : null,
+              ),
+              const SizedBox(height: 16),
+              TextFormField(
+                controller: descController,
+                decoration: InputDecoration(
+                  labelText: 'Mô tả',
+                  hintText: 'Mô tả ngắn về cuộc thi...',
+                  prefixIcon: const Icon(Icons.description_outlined),
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                  filled: true,
+                ),
+              ),
+              const SizedBox(height: 16),
+              TextFormField(
+                controller: durationController,
+                keyboardType: TextInputType.number,
+                decoration: InputDecoration(
+                  labelText: 'Thời gian (phút)',
+                  prefixIcon: const Icon(Icons.timer_outlined),
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                  filled: true,
+                ),
+              ),
+              const SizedBox(height: 24),
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton(
+                      onPressed: () => Navigator.pop(context),
+                      style: OutlinedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      ),
+                      child: const Text('Hủy'),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    flex: 2,
+                    child: ElevatedButton(
+                      onPressed: () async {
+                        if (formKey.currentState!.validate()) {
+                          try {
+                            await ref.read(contestRepositoryProvider).createContest(subjectId, {
+                              'name': titleController.text,
+                              'description': descController.text,
+                              'durationMinutes': int.tryParse(durationController.text) ?? 45,
+                              'status': 'UPCOMING',
+                            });
+                            ref.invalidate(contestsBySubjectProvider(subjectId));
+                            if (context.mounted) Navigator.pop(context);
+                          } catch (e) {
+                            if (context.mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Lỗi: $e'), backgroundColor: Colors.red));
+                            }
+                          }
+                        }
+                      },
+                      style: ElevatedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      ),
+                      child: const Text('Tạo cuộc thi'),
+                    ),
+                  ),
+                ],
+              ),
+            ],
           ),
-        ],
+        ),
       ),
     );
   }

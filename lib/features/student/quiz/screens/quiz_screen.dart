@@ -61,8 +61,15 @@ class _QuizScreenState extends ConsumerState<QuizScreen> {
     final isLastQuestion = currentQuestion != null &&
         quizState.currentQuestionIndex == quizState.questions.length - 1;
 
-    return WillPopScope(
-      onWillPop: _handleWillPop,
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, result) async {
+        if (didPop) return;
+        final shouldPop = await _handleWillPop();
+        if (shouldPop && context.mounted) {
+          context.pop();
+        }
+      },
       child: Scaffold(
         appBar: AppBar(
           leading: IconButton(
@@ -278,15 +285,15 @@ class _QuestionCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: Theme.of(context).cardColor,
         borderRadius: BorderRadius.circular(20),
-        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10)],
-        border: Border.all(color: Colors.grey.withOpacity(0.1)),
+        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 10)],
+        border: Border.all(color: Colors.grey.withValues(alpha: 0.1)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-            decoration: BoxDecoration(color: Colors.blue.withOpacity(0.1), borderRadius: BorderRadius.circular(8)),
+            decoration: BoxDecoration(color: Colors.blue.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(8)),
             child: Text('CÂU $index', style: const TextStyle(color: Colors.blue, fontWeight: FontWeight.bold, fontSize: 12)),
           ),
           const SizedBox(height: 16),
@@ -320,7 +327,7 @@ class _AnswersList extends StatelessWidget {
             child: Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: isSelected ? Colors.blue.withOpacity(0.1) : Theme.of(context).cardColor,
+                color: isSelected ? Colors.blue.withValues(alpha: 0.1) : Theme.of(context).cardColor,
                 borderRadius: BorderRadius.circular(16),
                 border: Border.all(color: isSelected ? Colors.blue : (Colors.grey[200] ?? Colors.grey), width: 2),
               ),
@@ -354,7 +361,7 @@ class _TimerSection extends StatelessWidget {
     final seconds = remainingSeconds % 60;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-      decoration: BoxDecoration(color: Colors.orange.withOpacity(0.1), borderRadius: BorderRadius.circular(30)),
+      decoration: BoxDecoration(color: Colors.orange.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(30)),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [

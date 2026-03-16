@@ -25,7 +25,7 @@ class TeacherSettingsScreen extends ConsumerWidget {
           Container(
             padding: const EdgeInsets.all(20),
             decoration: BoxDecoration(
-              color: theme.colorScheme.primary.withOpacity(0.1),
+              color: theme.colorScheme.primary.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(20),
             ),
             child: Row(
@@ -58,15 +58,15 @@ class TeacherSettingsScreen extends ConsumerWidget {
 
           const Text('QUẢN LÝ', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.grey, letterSpacing: 1.2)),
           const SizedBox(height: 8),
-          _buildMenuTile(Icons.person_search_outlined, 'Quản lý Sinh viên', () {}),
-          _buildMenuTile(Icons.analytics_outlined, 'Thống kê kết quả', () {}),
-          _buildMenuTile(Icons.backup_outlined, 'Sao lưu dữ liệu', () {}),
+          _buildMenuTile(Icons.person_search_outlined, 'Quản lý Sinh viên', () {}, isDark: theme.brightness == Brightness.dark),
+          _buildMenuTile(Icons.analytics_outlined, 'Thống kê kết quả', () {}, isDark: theme.brightness == Brightness.dark),
+          _buildMenuTile(Icons.backup_outlined, 'Sao lưu dữ liệu', () {}, isDark: theme.brightness == Brightness.dark),
           
           const SizedBox(height: 24),
           const Text('ỨNG DỤNG', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.grey, letterSpacing: 1.2)),
           const SizedBox(height: 8),
-          _buildMenuTile(Icons.dark_mode_outlined, 'Chế độ tối', () {}),
-          _buildMenuTile(Icons.info_outline, 'Thông tin phiên bản', () {}),
+          _buildMenuTile(Icons.dark_mode_outlined, 'Chế độ tối', () {}, isDark: theme.brightness == Brightness.dark),
+          _buildMenuTile(Icons.info_outline, 'Thông tin phiên bản', () {}, isDark: theme.brightness == Brightness.dark),
 
           const Padding(
             padding: EdgeInsets.symmetric(vertical: 16),
@@ -79,7 +79,7 @@ class TeacherSettingsScreen extends ConsumerWidget {
             leading: Container(
               padding: const EdgeInsets.all(8),
               decoration: BoxDecoration(
-                color: Colors.red.withOpacity(0.1),
+                color: Colors.red.withValues(alpha: 0.1),
                 shape: BoxShape.circle,
               ),
               child: const Icon(Icons.logout, color: Colors.red),
@@ -95,10 +95,10 @@ class TeacherSettingsScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildMenuTile(IconData icon, String label, VoidCallback onTap) {
+  Widget _buildMenuTile(IconData icon, String label, VoidCallback onTap, {bool isDark = false}) {
     return ListTile(
       onTap: onTap,
-      leading: Icon(icon, color: Colors.black87),
+      leading: Icon(icon, color: isDark ? Colors.white70 : Colors.black87),
       title: Text(label, style: const TextStyle(fontWeight: FontWeight.w500)),
       trailing: const Icon(Icons.chevron_right, size: 20),
       contentPadding: EdgeInsets.zero,

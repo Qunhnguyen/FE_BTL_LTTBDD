@@ -11,6 +11,11 @@ class ManagedQuestion {
   final int durationSeconds;
   final QuestionType type;
   final String? imageUrl;
+  final String? correctOption;
+  final String? optionA;
+  final String? optionB;
+  final String? optionC;
+  final String? optionD;
 
   ManagedQuestion({
     required this.id,
@@ -21,34 +26,66 @@ class ManagedQuestion {
     required this.durationSeconds,
     required this.type,
     this.imageUrl,
+    this.correctOption,
+    this.optionA,
+    this.optionB,
+    this.optionC,
+    this.optionD,
   });
 
   factory ManagedQuestion.fromJson(Map<String, dynamic> json) {
+    // Nội dung: thử content → text → question
+    final questionText = json['content'] ?? json['text'] ?? json['question'] ?? '';
+
+    // Điểm: thử score → points → point
+    final rawPoints = json['score'] ?? json['points'] ?? json['point'] ?? 0;
+    final questionPoints = rawPoints is int ? rawPoints : (int.tryParse(rawPoints.toString()) ?? 0);
+
+    // Thời gian: thử durationSeconds → duration → time → timeLimit
+    final rawDuration = json['durationSeconds'] ?? json['duration'] ?? json['time'] ?? json['timeLimit'] ?? 0;
+    final questionDuration = rawDuration is int ? rawDuration : (int.tryParse(rawDuration.toString()) ?? 0);
+
+    // Đếm số đáp án
+    int answerCount = 0;
+    if (json['answers'] != null) {
+      answerCount = (json['answers'] as List).length;
+    } else {
+      if (json['optionA'] != null) answerCount++;
+      if (json['optionB'] != null) answerCount++;
+      if (json['optionC'] != null) answerCount++;
+      if (json['optionD'] != null) answerCount++;
+    }
+
     return ManagedQuestion(
       id: json['id']?.toString() ?? '',
-      text: json['text'] ?? '',
+      text: questionText,
       difficulty: _parseDifficulty(json['difficulty']),
-      points: json['points'] ?? 0,
-      answerCount: json['answers'] != null ? (json['answers'] as List).length : 0,
-      durationSeconds: json['durationSeconds'] ?? 0,
+      points: questionPoints,
+      answerCount: answerCount,
+      durationSeconds: questionDuration,
       type: _parseType(json['type']),
       imageUrl: json['imageUrl'],
+      correctOption: json['correctOption']?.toString(),
+      optionA: json['optionA']?.toString(),
+      optionB: json['optionB']?.toString(),
+      optionC: json['optionC']?.toString(),
+      optionD: json['optionD']?.toString(),
     );
   }
 
   static QuestionDifficulty _parseDifficulty(String? difficulty) {
-    switch (difficulty?.toLowerCase()) {
-      case 'easy': return QuestionDifficulty.easy;
-      case 'medium': return QuestionDifficulty.medium;
-      case 'hard': return QuestionDifficulty.hard;
+    switch (difficulty?.toUpperCase()) {
+      case 'EASY': return QuestionDifficulty.easy;
+      case 'MEDIUM': return QuestionDifficulty.medium;
+      case 'HARD': return QuestionDifficulty.hard;
       default: return QuestionDifficulty.draft;
     }
   }
 
   static QuestionType _parseType(String? type) {
-    switch (type?.toLowerCase()) {
-      case 'essay': return QuestionType.essay;
-      case 'image': return QuestionType.image;
+    switch (type?.toUpperCase()) {
+      case 'ESSAY': return QuestionType.essay;
+      case 'IMAGE': return QuestionType.image;
       default: return QuestionType.multipleChoice;
     }
   }

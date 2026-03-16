@@ -22,10 +22,7 @@ class LeaderboardScreen extends ConsumerWidget {
 
     return Scaffold(
       appBar: AppBar(
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
-          onPressed: () => context.pop(),
-        ),
+        automaticallyImplyLeading: false,
         title: const Text('Bảng xếp hạng', style: TextStyle(fontWeight: FontWeight.bold)),
       ),
       body: Column(
@@ -78,7 +75,7 @@ class LeaderboardScreen extends ConsumerWidget {
                       borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
                       boxShadow: [
                         BoxShadow(
-                          color: Colors.black.withOpacity(0.05),
+                          color: Colors.black.withValues(alpha: 0.05),
                           blurRadius: 10,
                           offset: const Offset(0, -5),
                         ),
@@ -123,8 +120,8 @@ class LeaderboardScreen extends ConsumerWidget {
       bottomSheet: currentUserEntry != null && currentUserEntry.rank > 3 ? Container(
         padding: const EdgeInsets.fromLTRB(16, 12, 16, 32),
         decoration: BoxDecoration(
-          color: theme.colorScheme.primary.withOpacity(0.1),
-          border: Border(top: BorderSide(color: theme.colorScheme.primary.withOpacity(0.2))),
+          color: theme.colorScheme.primary.withValues(alpha: 0.1),
+          border: Border(top: BorderSide(color: theme.colorScheme.primary.withValues(alpha: 0.2))),
         ),
         child: _LeaderboardTile(entry: currentUserEntry, isHighlight: true),
       ) : null,
@@ -152,7 +149,7 @@ class _TabButton extends StatelessWidget {
           decoration: BoxDecoration(
             color: isSelected ? (isDark ? theme.colorScheme.primary : Colors.white) : Colors.transparent,
             borderRadius: BorderRadius.circular(10),
-            boxShadow: isSelected && !isDark ? [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 4, offset: const Offset(0, 2))] : [],
+            boxShadow: isSelected && !isDark ? [BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 4, offset: const Offset(0, 2))] : [],
           ),
           child: Text(
             label,
@@ -232,7 +229,7 @@ class _PodiumItem extends StatelessWidget {
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
                 border: Border.all(color: color, width: 4),
-                boxShadow: [BoxShadow(color: color.withOpacity(0.3), blurRadius: 10, offset: const Offset(0, 4))],
+                boxShadow: [BoxShadow(color: color.withValues(alpha: 0.3), blurRadius: 10, offset: const Offset(0, 4))],
               ),
               clipBehavior: Clip.antiAlias,
               child: Image.network(
@@ -265,7 +262,7 @@ class _PodiumItem extends StatelessWidget {
           height: height,
           decoration: BoxDecoration(
             gradient: LinearGradient(
-              colors: [color.withOpacity(0.5), color.withOpacity(0.1)],
+              colors: [color.withValues(alpha: 0.5), color.withValues(alpha: 0.1)],
               begin: Alignment.topCenter,
               end: Alignment.bottomCenter,
             ),
@@ -292,7 +289,7 @@ class _LeaderboardTile extends StatelessWidget {
       margin: const EdgeInsets.only(bottom: 8),
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       decoration: BoxDecoration(
-        color: isHighlight ? Colors.transparent : (isDark ? Colors.white.withOpacity(0.05) : theme.scaffoldBackgroundColor),
+        color: isHighlight ? Colors.transparent : (isDark ? Colors.white.withValues(alpha: 0.05) : theme.scaffoldBackgroundColor),
         borderRadius: BorderRadius.circular(16),
       ),
       child: Row(
@@ -380,12 +377,12 @@ class _AvatarFallback extends StatelessWidget {
     return Container(
       width: size,
       height: size,
-      color: theme.colorScheme.primary.withOpacity(0.08),
+      color: theme.colorScheme.primary.withValues(alpha: 0.08),
       alignment: Alignment.center,
       child: Icon(
         Icons.person,
         size: size * 0.45,
-        color: theme.colorScheme.primary.withOpacity(0.7),
+        color: theme.colorScheme.primary.withValues(alpha: 0.7),
       ),
     );
   }
