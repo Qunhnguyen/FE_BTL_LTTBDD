@@ -8,14 +8,20 @@ final contestsProvider = FutureProvider<List<Contest>>((ref) async {
   final contestRepo = ref.watch(contestRepositoryProvider);
   final subjectRepo = ref.watch(subjectRepositoryProvider);
   
-  // Lưu ý: Nếu bị lỗi 403, nghĩa là Backend chặn Role Student truy cập link /api/admin
-  // Bạn cần kiểm tra cấu hình Security ở Backend cho các link này
+  // 1. Lấy danh sách môn học thật
   final subjects = await subjectRepo.getSubjects();
   List<Contest> allContests = [];
   
   for (var subject in subjects) {
+    // 2. Lấy cuộc thi của từng môn và truyền kèm TÊN môn học
     final contests = await contestRepo.getContestsBySubject(subject.id);
-    allContests.addAll(contests);
+    final mappedContests = contests.map((c) => Contest.fromJson(
+      // Giả định contest data gốc, truyền thêm tên môn học thật để hiển thị
+      {'id': c.id, 'name': c.title, 'description': c.description, 'durationMinutes': c.durationMinutes},
+      sName: subject.name, 
+    )).toList();
+    
+    allContests.addAll(mappedContests);
   }
   
   return allContests;

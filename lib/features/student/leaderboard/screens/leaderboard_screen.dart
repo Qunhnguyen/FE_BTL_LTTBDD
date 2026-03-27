@@ -3,6 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../models/leaderboard_entry.dart';
 import '../providers/leaderboard_provider.dart';
+import '../../home/providers/contest_provider.dart';
+import '../../../../core/router/app_router.dart';
 
 class LeaderboardScreen extends ConsumerWidget {
   const LeaderboardScreen({super.key});
@@ -11,14 +13,9 @@ class LeaderboardScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
-    final currentTab = ref.watch(leaderboardTabProvider);
-    final entries = ref.watch(leaderboardEntriesProvider);
-
-    final podiumEntries = entries.take(3).toList();
-    final remainingEntries = entries.skip(3).toList();
-    final currentUserEntry = entries.where((e) => e.isCurrentUser).isNotEmpty
-        ? entries.firstWhere((e) => e.isCurrentUser)
-        : null;
+    final contestsAsync = ref.watch(contestsProvider);
+    final selectedContestId = ref.watch(selectedLeaderboardContestIdProvider);
+    final entriesAsync = ref.watch(leaderboardEntriesProvider);
 
     return Scaffold(
       appBar: AppBar(
@@ -27,140 +24,115 @@ class LeaderboardScreen extends ConsumerWidget {
       ),
       body: Column(
         children: [
-          // Tabs
+          // Contest Selector
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-            child: Container(
-              padding: const EdgeInsets.all(4),
-              decoration: BoxDecoration(
-                color: isDark ? Colors.white10 : Colors.grey[200],
-                borderRadius: BorderRadius.circular(12),
+            padding: const EdgeInsets.all(16.0),
+            child: contestsAsync.when(
+              data: (contests) => DropdownButtonFormField<String>(
+                value: selectedContestId ?? (contests.isNotEmpty ? contests.first.id : null),
+                decoration: InputDecoration(
+                  labelText: 'Chọn cuộc thi',
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                ),
+                items: contests.map((c) => DropdownMenuItem(
+                  value: c.id,
+                  child: Text(c.title, overflow: TextOverflow.ellipsis),
+                )).toList(),
+                onChanged: (val) {
+                  ref.read(selectedLeaderboardContestIdProvider.notifier).state = val;
+                },
               ),
-              child: Row(
-                children: [
-                  _TabButton(
-                    label: 'Tuần này',
-                    isSelected: currentTab == LeaderboardTab.weekly,
-                    onTap: () => ref.read(leaderboardTabProvider.notifier).state = LeaderboardTab.weekly,
-                  ),
-                  _TabButton(
-                    label: 'Tháng này',
-                    isSelected: currentTab == LeaderboardTab.monthly,
-                    onTap: () => ref.read(leaderboardTabProvider.notifier).state = LeaderboardTab.monthly,
-                  ),
-                  _TabButton(
-                    label: 'Tất cả',
-                    isSelected: currentTab == LeaderboardTab.allTime,
-                    onTap: () => ref.read(leaderboardTabProvider.notifier).state = LeaderboardTab.allTime,
-                  ),
-                ],
-              ),
+              loading: () => const LinearProgressIndicator(),
+              error: (_, __) => const Text('Lỗi tải danh sách cuộc thi'),
             ),
           ),
 
           Expanded(
-            child: SingleChildScrollView(
-              child: Column(
-                children: [
-                  // Podium
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(16, 24, 16, 32),
-                    child: _Podium(entries: podiumEntries),
-                  ),
+            child: entriesAsync.when(
+              data: (entries) {
+                if (entries.isEmpty) {
+                  return const Center(child: Text('Chưa có dữ liệu xếp hạng.'));
+                }
 
-                  // List Section
-                  Container(
-                    decoration: BoxDecoration(
-                      color: isDark ? theme.cardColor : Colors.white,
-                      borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withValues(alpha: 0.05),
-                          blurRadius: 10,
-                          offset: const Offset(0, -5),
+                final podiumEntries = entries.take(3).toList();
+                final remainingEntries = entries.skip(3).toList();
+                final currentUserEntry = entries.where((e) => e.isCurrentUser).isNotEmpty
+                    ? entries.firstWhere((e) => e.isCurrentUser)
+                    : null;
+
+                return Column(
+                  children: [
+                    Expanded(
+                      child: SingleChildScrollView(
+                        child: Column(
+                          children: [
+                            if (podiumEntries.isNotEmpty)
+                              Padding(
+                                padding: const EdgeInsets.fromLTRB(16, 24, 16, 32),
+                                child: _Podium(entries: podiumEntries),
+                              ),
+                            
+                            Container(
+                              decoration: BoxDecoration(
+                                color: isDark ? theme.cardColor : Colors.white,
+                                borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.black.withOpacity(0.05),
+                                    blurRadius: 10,
+                                    offset: const Offset(0, -5),
+                                  ),
+                                ],
+                              ),
+                              child: Column(
+                                children: [
+                                  Padding(
+                                    padding: const EdgeInsets.fromLTRB(24, 24, 24, 8),
+                                    child: Row(
+                                      children: const [
+                                        SizedBox(width: 32, child: Text('#', style: TextStyle(color: Colors.grey, fontSize: 12))),
+                                        Expanded(child: Text('Thành viên', style: TextStyle(color: Colors.grey, fontSize: 12))),
+                                        SizedBox(width: 60, child: Text('Điểm', textAlign: TextAlign.right, style: TextStyle(color: Colors.grey, fontSize: 12))),
+                                        SizedBox(width: 70, child: Text('Nộp lúc', textAlign: TextAlign.right, style: TextStyle(color: Colors.grey, fontSize: 12))),
+                                      ],
+                                    ),
+                                  ),
+                                  const Divider(indent: 24, endIndent: 24),
+                                  ListView.builder(
+                                    shrinkWrap: true,
+                                    physics: const NeverScrollableScrollPhysics(),
+                                    padding: const EdgeInsets.fromLTRB(16, 8, 16, 100),
+                                    itemCount: remainingEntries.length,
+                                    itemBuilder: (context, index) {
+                                      final entry = remainingEntries[index];
+                                      return _LeaderboardTile(entry: entry);
+                                    },
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
                         ),
-                      ],
+                      ),
                     ),
-                    child: Column(
-                      children: [
-                        // List Header
-                        Padding(
-                          padding: const EdgeInsets.fromLTRB(24, 24, 24, 8),
-                          child: Row(
-                            children: const [
-                              SizedBox(width: 32, child: Text('#', style: TextStyle(color: Colors.grey, fontSize: 12))),
-                              Expanded(child: Text('Thành viên', style: TextStyle(color: Colors.grey, fontSize: 12))),
-                              SizedBox(width: 60, child: Text('Điểm', textAlign: TextAlign.right, style: TextStyle(color: Colors.grey, fontSize: 12))),
-                              SizedBox(width: 70, child: Text('Thời gian', textAlign: TextAlign.right, style: TextStyle(color: Colors.grey, fontSize: 12))),
-                            ],
-                          ),
+                    if (currentUserEntry != null && currentUserEntry.rank > 3)
+                      Container(
+                        padding: const EdgeInsets.fromLTRB(16, 12, 16, 32),
+                        decoration: BoxDecoration(
+                          color: theme.colorScheme.primary.withOpacity(0.1),
+                          border: Border(top: BorderSide(color: theme.colorScheme.primary.withOpacity(0.2))),
                         ),
-                        const Divider(indent: 24, endIndent: 24),
-                        // List Items
-                        ListView.builder(
-                          shrinkWrap: true,
-                          physics: const NeverScrollableScrollPhysics(),
-                          padding: const EdgeInsets.fromLTRB(16, 8, 16, 100),
-                          itemCount: remainingEntries.length,
-                          itemBuilder: (context, index) {
-                            final entry = remainingEntries[index];
-                            return _LeaderboardTile(entry: entry);
-                          },
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
+                        child: _LeaderboardTile(entry: currentUserEntry, isHighlight: true),
+                      ),
+                  ],
+                );
+              },
+              loading: () => const Center(child: CircularProgressIndicator()),
+              error: (err, _) => Center(child: Text('Lỗi: $err')),
             ),
           ),
         ],
-      ),
-      // Sticky Current User Info
-      bottomSheet: currentUserEntry != null && currentUserEntry.rank > 3 ? Container(
-        padding: const EdgeInsets.fromLTRB(16, 12, 16, 32),
-        decoration: BoxDecoration(
-          color: theme.colorScheme.primary.withValues(alpha: 0.1),
-          border: Border(top: BorderSide(color: theme.colorScheme.primary.withValues(alpha: 0.2))),
-        ),
-        child: _LeaderboardTile(entry: currentUserEntry, isHighlight: true),
-      ) : null,
-    );
-  }
-}
-
-class _TabButton extends StatelessWidget {
-  final String label;
-  final bool isSelected;
-  final VoidCallback onTap;
-
-  const _TabButton({required this.label, required this.isSelected, required this.onTap});
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
-
-    return Expanded(
-      child: GestureDetector(
-        onTap: onTap,
-        child: Container(
-          padding: const EdgeInsets.symmetric(vertical: 10),
-          decoration: BoxDecoration(
-            color: isSelected ? (isDark ? theme.colorScheme.primary : Colors.white) : Colors.transparent,
-            borderRadius: BorderRadius.circular(10),
-            boxShadow: isSelected && !isDark ? [BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 4, offset: const Offset(0, 2))] : [],
-          ),
-          child: Text(
-            label,
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              fontSize: 13,
-              fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
-              color: isSelected ? (isDark ? Colors.white : theme.colorScheme.primary) : Colors.grey,
-            ),
-          ),
-        ),
       ),
     );
   }
@@ -168,25 +140,22 @@ class _TabButton extends StatelessWidget {
 
 class _Podium extends StatelessWidget {
   final List<LeaderboardEntry> entries;
-
   const _Podium({required this.entries});
 
   @override
   Widget build(BuildContext context) {
-    if (entries.length < 3) return const SizedBox();
-
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
       crossAxisAlignment: CrossAxisAlignment.end,
       children: [
-        // 2nd Place
-        Expanded(child: _PodiumItem(entry: entries[1], rank: 2, height: 100, color: Colors.grey[400]!)),
+        if (entries.length > 1)
+          Expanded(child: _PodiumItem(entry: entries[1], rank: 2, height: 100, color: Colors.grey[400]!)),
         const SizedBox(width: 12),
-        // 1st Place
-        Expanded(child: _PodiumItem(entry: entries[0], rank: 1, height: 140, color: Colors.yellow[600]!, isLarge: true)),
+        if (entries.isNotEmpty)
+          Expanded(child: _PodiumItem(entry: entries[0], rank: 1, height: 140, color: Colors.yellow[600]!, isLarge: true)),
         const SizedBox(width: 12),
-        // 3rd Place
-        Expanded(child: _PodiumItem(entry: entries[2], rank: 3, height: 80, color: Colors.orange[300]!)),
+        if (entries.length > 2)
+          Expanded(child: _PodiumItem(entry: entries[2], rank: 3, height: 80, color: Colors.orange[300]!)),
       ],
     );
   }
@@ -229,7 +198,7 @@ class _PodiumItem extends StatelessWidget {
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
                 border: Border.all(color: color, width: 4),
-                boxShadow: [BoxShadow(color: color.withValues(alpha: 0.3), blurRadius: 10, offset: const Offset(0, 4))],
+                boxShadow: [BoxShadow(color: color.withOpacity(0.3), blurRadius: 10, offset: const Offset(0, 4))],
               ),
               clipBehavior: Clip.antiAlias,
               child: Image.network(
@@ -256,13 +225,13 @@ class _PodiumItem extends StatelessWidget {
         ),
         const SizedBox(height: 20),
         Text(entry.name, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14), overflow: TextOverflow.ellipsis),
-        Text('${entry.points} pts', style: TextStyle(color: theme.colorScheme.primary, fontWeight: FontWeight.bold, fontSize: 12)),
+        Text('${entry.score} pts', style: TextStyle(color: theme.colorScheme.primary, fontWeight: FontWeight.bold, fontSize: 12)),
         const SizedBox(height: 12),
         Container(
           height: height,
           decoration: BoxDecoration(
             gradient: LinearGradient(
-              colors: [color.withValues(alpha: 0.5), color.withValues(alpha: 0.1)],
+              colors: [color.withOpacity(0.5), color.withOpacity(0.1)],
               begin: Alignment.topCenter,
               end: Alignment.bottomCenter,
             ),
@@ -289,7 +258,7 @@ class _LeaderboardTile extends StatelessWidget {
       margin: const EdgeInsets.only(bottom: 8),
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       decoration: BoxDecoration(
-        color: isHighlight ? Colors.transparent : (isDark ? Colors.white.withValues(alpha: 0.05) : theme.scaffoldBackgroundColor),
+        color: isHighlight ? Colors.transparent : (isDark ? Colors.white.withOpacity(0.05) : theme.scaffoldBackgroundColor),
         borderRadius: BorderRadius.circular(16),
       ),
       child: Row(
@@ -330,21 +299,13 @@ class _LeaderboardTile extends StatelessWidget {
                     fontSize: 14,
                   ),
                 ),
-                if (isHighlight)
-                  Row(
-                    children: [
-                      Icon(Icons.arrow_upward, size: 10, color: theme.colorScheme.primary),
-                      const SizedBox(width: 4),
-                      Text('Hạng tăng', style: TextStyle(color: theme.colorScheme.primary, fontSize: 10)),
-                    ],
-                  ),
               ],
             ),
           ),
           SizedBox(
             width: 60,
             child: Text(
-              '${entry.points}',
+              '${entry.score}',
               textAlign: TextAlign.right,
               style: TextStyle(
                 fontWeight: FontWeight.bold,
@@ -355,7 +316,9 @@ class _LeaderboardTile extends StatelessWidget {
           SizedBox(
             width: 70,
             child: Text(
-              '${entry.timeTaken.inMinutes}m ${entry.timeTaken.inSeconds % 60}s',
+              entry.submittedAt != null 
+                ? '${entry.submittedAt!.hour}:${entry.submittedAt!.minute.toString().padLeft(2, '0')}' 
+                : '--:--',
               textAlign: TextAlign.right,
               style: const TextStyle(color: Colors.grey, fontSize: 11),
             ),
@@ -368,21 +331,19 @@ class _LeaderboardTile extends StatelessWidget {
 
 class _AvatarFallback extends StatelessWidget {
   final double size;
-
   const _AvatarFallback({required this.size});
-
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     return Container(
       width: size,
       height: size,
-      color: theme.colorScheme.primary.withValues(alpha: 0.08),
+      color: theme.colorScheme.primary.withOpacity(0.08),
       alignment: Alignment.center,
       child: Icon(
         Icons.person,
         size: size * 0.45,
-        color: theme.colorScheme.primary.withValues(alpha: 0.7),
+        color: theme.colorScheme.primary.withOpacity(0.7),
       ),
     );
   }
