@@ -3,6 +3,8 @@ class User {
   final String email;
   final String name;
   final String role; // 'STUDENT' or 'TEACHER'
+  final String? avatarFileId;
+  final String? avatarUrl;
   final String? token;
 
   User({
@@ -10,15 +12,35 @@ class User {
     required this.email,
     required this.name,
     required this.role,
+    this.avatarFileId,
+    this.avatarUrl,
     this.token,
   });
 
   factory User.fromJson(Map<String, dynamic> json, {String? token}) {
     return User(
-      id: json['id']?.toString() ?? '',
+      id: (json['id'] ?? json['_id'] ?? '').toString(),
       email: json['email'] ?? '',
       name: json['name'] ?? '',
       role: json['role'] ?? '',
+      avatarFileId: json['avatarFileId']?.toString(),
+      avatarUrl: json['avatarUrl'],
+      token: token,
+    );
+  }
+
+  User copyWith({
+    String? name,
+    String? avatarFileId,
+    String? avatarUrl,
+  }) {
+    return User(
+      id: id,
+      email: email,
+      name: name ?? this.name,
+      role: role,
+      avatarFileId: avatarFileId ?? this.avatarFileId,
+      avatarUrl: avatarUrl ?? this.avatarUrl,
       token: token,
     );
   }

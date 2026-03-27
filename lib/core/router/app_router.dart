@@ -151,6 +151,8 @@ final routerProvider = Provider<GoRouter>((ref) {
           ),
         ],
       ),
+
+      ]
       GoRoute(
         parentNavigatorKey: _rootNavigatorKey,
         path: '/student/result',

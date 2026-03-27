@@ -1,8 +1,16 @@
+import 'dart:io';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/user.dart';
 import '../repositories/auth_repository.dart';
 
-enum AuthStatus { initial, authenticating, authenticated, unauthenticated, error }
+enum AuthStatus {
+  initial,
+  authenticating,
+  authenticated,
+  unauthenticated,
+  error
+}
 
 class AuthState {
   static const _unset = Object();
@@ -73,7 +81,8 @@ class AuthNotifier extends StateNotifier<AuthState> {
   }
 
   Future<void> login(String email, String password, String role) async {
-    state = state.copyWith(status: AuthStatus.authenticating, errorMessage: null);
+    state =
+        state.copyWith(status: AuthStatus.authenticating, errorMessage: null);
     try {
       final user = await _repository.login(email, password, role);
       state = state.copyWith(status: AuthStatus.authenticated, user: user);
@@ -83,6 +92,26 @@ class AuthNotifier extends StateNotifier<AuthState> {
         errorMessage: 'Đăng nhập thất bại. Vui lòng kiểm tra lại thông tin.',
       );
     }
+  }
+
+  Future<User> updateStudentProfile(String name) async {
+    final user = await _repository.updateProfile(name);
+    state = state.copyWith(
+      status: AuthStatus.authenticated,
+      user: user,
+      errorMessage: null,
+    );
+    return user;
+  }
+
+  Future<User> uploadStudentAvatar(File imageFile) async {
+    final user = await _repository.uploadAvatar(imageFile);
+    state = state.copyWith(
+      status: AuthStatus.authenticated,
+      user: user,
+      errorMessage: null,
+    );
+    return user;
   }
 
   Future<void> logout() async {
