@@ -29,7 +29,7 @@ class StudentProfileScreen extends ConsumerWidget {
                   children: [
                     CircleAvatar(
                       radius: 50,
-                      backgroundColor: theme.colorScheme.primary.withValues(alpha: 0.1),
+                      backgroundColor: theme.colorScheme.primary.withOpacity(0.1),
                       child: Icon(
                         Icons.person,
                         size: 50,
@@ -83,7 +83,7 @@ class StudentProfileScreen extends ConsumerWidget {
                 leading: Container(
                   padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(
-                    color: Colors.red.withValues(alpha: 0.1),
+                    color: Colors.red.withOpacity(0.1),
                     shape: BoxShape.circle,
                   ),
                   child: const Icon(Icons.logout, color: Colors.red),
@@ -113,7 +113,7 @@ class StudentProfileScreen extends ConsumerWidget {
       leading: Container(
         padding: const EdgeInsets.all(8),
         decoration: BoxDecoration(
-          color: Colors.grey.withValues(alpha: 0.1),
+          color: Colors.grey.withOpacity(0.1),
           shape: BoxShape.circle,
         ),
         child: Icon(icon, color: isDark ? Colors.white70 : Colors.black87),

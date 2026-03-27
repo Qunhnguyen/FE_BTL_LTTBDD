@@ -1,8 +1,6 @@
-import 'dart:convert';
-
-import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/network/api_client.dart';
+import '../models/question.dart';
 
 final quizRepositoryProvider = Provider<QuizRepository>((ref) {
   final apiClient = ref.watch(apiClientProvider);
@@ -15,59 +13,56 @@ class QuizRepository {
   QuizRepository(this._apiClient);
 
   // API lấy chi tiết cuộc thi kèm danh sách câu hỏi dành cho Student
-  Future<dynamic> getStudentContestDetail(String contestId) async {
+  Future<Map<String, dynamic>> getStudentContestDetail(String contestId) async {
     final response = await _apiClient.get('/api/student/contests/$contestId');
-    _logJson('GET /api/student/contests/$contestId', response.data);
     return response.data;
   }
 
+  // API lấy danh sách câu hỏi (dùng endpoint admin nếu cần hoặc contest detail)
+  Future<List<Question>> getQuestionsForContest(String contestId) async {
+    // Ưu tiên dùng endpoint detail của contest vì nó trả về questions mảng phẳng
+    final data = await getStudentContestDetail(contestId);
+    final List<dynamic> questionsRaw = data['questions'] ?? [];
+    return questionsRaw.map((q) => Question.fromJson(q)).toList();
+  }
+
   // API bắt đầu làm bài
-  Future<Map<String, dynamic>> startSubmission(String contestId, String studentId) async {
-    final response = await _apiClient.post(
-      '/api/student/submissions/$contestId/start',
-      queryParameters: {'studentId': studentId},
-    );
-    _logJson('POST /api/student/submissions/$contestId/start', response.data);
-    return _asJsonMap(response.data);
+  Future<Map<String, dynamic>> startSubmission(
+      String contestId, String studentId) async {
+    final response =
+        await _apiClient.post('/api/student/submissions/$contestId/start');
+    return response.data;
   }
 
   // API nộp đáp án từng câu
-  Future<void> submitAnswer(String submissionId, String questionId, String answer) async {
-    final response = await _apiClient.post(
+  Future<void> submitAnswer(
+      String submissionId, String questionId, String answer) async {
+    await _apiClient.post(
       '/api/student/submissions/$submissionId/answer',
       data: {
         'questionId': questionId,
         'selectedOption': answer,
       },
     );
-    _logJson('POST /api/student/submissions/$submissionId/answer', response.data);
   }
 
-  // API kết thúc bài thi
+  // API kết thúc bài thi (Chốt điểm)
   Future<Map<String, dynamic>> finishSubmission(String submissionId) async {
-    final response = await _apiClient.post('/api/student/submissions/$submissionId/finish');
-    _logJson('POST /api/student/submissions/$submissionId/finish', response.data);
-    return _asJsonMap(response.data);
+    final response =
+        await _apiClient.post('/api/student/submissions/$submissionId/finish');
+    return response.data; // Trả về kết quả: score, correctCount, time, v.v.
   }
 
-  Map<String, dynamic> _asJsonMap(dynamic data) {
-    if (data is Map<String, dynamic>) {
-      return data;
-    }
-    if (data is Map) {
-      return Map<String, dynamic>.from(data);
-    }
-    return {'data': data};
-  }
-
-  void _logJson(String label, dynamic data) {
-    try {
-      final responseText = data is String
-          ? data
-          : const JsonEncoder.withIndent('  ').convert(data);
-      debugPrint('Response Text [$label]:\n$responseText');
-    } catch (_) {
-      debugPrint('Response Text [$label]: $data');
-    }
+  // API sử dụng quyền trợ giúp
+  Future<Map<String, dynamic>> usePowerUp(
+      String submissionId, String questionId, String type) async {
+    final response = await _apiClient.post(
+      '/api/student/submissions/$submissionId/power-up',
+      data: {
+        'type': type, // "50_50", "SKIP", "ASK_AUDIENCE"
+        'questionId': questionId,
+      },
+    );
+    return response.data;
   }
 }
