@@ -147,7 +147,7 @@ class StudentHomeScreen extends ConsumerWidget {
                           subtitle: 'Xem lại kết quả',
                           icon: Icons.history,
                           color: Colors.orange,
-                          onTap: () => context.go('/student/history'),
+                          onTap: () => context.goNamed(AppRouteNames.studentHistory),
                         ),
                       ),
                       const SizedBox(width: 12),
@@ -157,7 +157,7 @@ class StudentHomeScreen extends ConsumerWidget {
                           subtitle: 'Top sinh viên',
                           icon: Icons.emoji_events,
                           color: Colors.purple,
-                          onTap: () => context.go('/student/leaderboard'),
+                          onTap: () => context.goNamed(AppRouteNames.studentLeaderboard),
                         ),
                       ),
                     ],
@@ -268,7 +268,7 @@ class _QuickAccessCard extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: isDark ? Colors.white.withValues(alpha: 0.05) : Colors.white,
+          color: isDark ? Colors.white.withOpacity(0.05) : Colors.white,
           borderRadius: BorderRadius.circular(16),
           border: Border.all(
             color: isDark ? Colors.white10 : (Colors.grey[200] ?? Colors.grey),
@@ -279,7 +279,7 @@ class _QuickAccessCard extends StatelessWidget {
             Container(
               padding: const EdgeInsets.all(8),
               decoration: BoxDecoration(
-                color: color.withValues(alpha: 0.1),
+                color: color.withOpacity(0.1),
                 shape: BoxShape.circle,
               ),
               child: Icon(icon, color: color, size: 20),
@@ -335,7 +335,7 @@ class _FilterChip extends StatelessWidget {
           boxShadow: isSelected
               ? [
                   BoxShadow(
-                    color: theme.colorScheme.primary.withValues(alpha: 0.3),
+                    color: theme.colorScheme.primary.withOpacity(0.3),
                     blurRadius: 8,
                     offset: const Offset(0, 4),
                   )
@@ -367,7 +367,7 @@ class _ContestCard extends StatelessWidget {
 
     return Container(
       decoration: BoxDecoration(
-        color: isDark ? Colors.white.withValues(alpha: 0.05) : Colors.white,
+        color: isDark ? Colors.white.withOpacity(0.05) : Colors.white,
         borderRadius: BorderRadius.circular(20),
         border: Border.all(
           color: isDark ? Colors.white10 : (Colors.grey[200] ?? Colors.grey),
@@ -412,7 +412,7 @@ class _ContestCard extends StatelessWidget {
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  'Môn: ${contest.subject} • ${contest.description}',
+                  'Môn: ${contest.subjectName} • ${contest.description}',
                   style: const TextStyle(color: Colors.grey, fontSize: 13),
                 ),
                 const SizedBox(height: 16),
@@ -420,9 +420,9 @@ class _ContestCard extends StatelessWidget {
                   Container(
                     padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
-                      color: theme.colorScheme.primary.withValues(alpha: 0.05),
+                      color: theme.colorScheme.primary.withOpacity(0.05),
                       borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: theme.colorScheme.primary.withValues(alpha: 0.1)),
+                      border: Border.all(color: theme.colorScheme.primary.withOpacity(0.1)),
                     ),
                     child: Row(
                       children: [
@@ -479,7 +479,7 @@ class _ContestCard extends StatelessWidget {
                             onPressed: () {},
                             style: ElevatedButton.styleFrom(
                               minimumSize: const Size(0, 40),
-                              backgroundColor: theme.colorScheme.primary.withValues(alpha: 0.1),
+                              backgroundColor: theme.colorScheme.primary.withOpacity(0.1),
                               foregroundColor: theme.colorScheme.primary,
                               elevation: 0,
                               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
@@ -511,7 +511,7 @@ class _StatusBadge extends StatelessWidget {
         return Container(
           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
           decoration: BoxDecoration(
-            color: Colors.red.withValues(alpha: 0.1),
+            color: Colors.red.withOpacity(0.1),
             borderRadius: BorderRadius.circular(6),
           ),
           child: Row(
@@ -534,7 +534,7 @@ class _StatusBadge extends StatelessWidget {
         return Container(
           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
           decoration: BoxDecoration(
-            color: Colors.blue.withValues(alpha: 0.1),
+            color: Colors.blue.withOpacity(0.1),
             borderRadius: BorderRadius.circular(6),
           ),
           child: Row(
@@ -553,7 +553,7 @@ class _StatusBadge extends StatelessWidget {
         return Container(
           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
           decoration: BoxDecoration(
-            color: Colors.grey.withValues(alpha: 0.1),
+            color: Colors.grey.withOpacity(0.1),
             borderRadius: BorderRadius.circular(6),
           ),
           child: const Text(
@@ -646,7 +646,7 @@ class _CircleAvatarFallback extends StatelessWidget {
       width: size,
       height: size,
       decoration: BoxDecoration(
-        color: theme.colorScheme.primary.withValues(alpha: 0.08),
+        color: theme.colorScheme.primary.withOpacity(0.08),
         shape: BoxShape.circle,
         border: Border.all(color: borderColor, width: 2),
       ),
@@ -654,7 +654,7 @@ class _CircleAvatarFallback extends StatelessWidget {
       child: Icon(
         Icons.person,
         size: size * 0.45,
-        color: theme.colorScheme.primary.withValues(alpha: 0.7),
+        color: theme.colorScheme.primary.withOpacity(0.7),
       ),
     );
   }
