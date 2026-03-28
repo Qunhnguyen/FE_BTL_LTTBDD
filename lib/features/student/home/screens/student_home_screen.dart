@@ -5,6 +5,7 @@ import '../../../../core/router/app_router.dart';
 import '../../../auth/providers/auth_provider.dart';
 import '../providers/contest_provider.dart';
 import '../models/contest.dart';
+import '../../notifications/providers/notification_provider.dart';
 
 class StudentHomeScreen extends ConsumerWidget {
   const StudentHomeScreen({super.key});
@@ -16,9 +17,13 @@ class StudentHomeScreen extends ConsumerWidget {
     final currentFilter = ref.watch(contestStatusFilterProvider);
     final filteredContestsAsync = ref.watch(filteredContestsProvider);
     final authState = ref.watch(authProvider);
+    
     final user = authState.user;
     final userName = user?.name ?? 'Người dùng';
     final avatarUrl = user?.avatarUrl;
+
+    // Lắng nghe trạng thái thông báo
+    final notificationState = ref.watch(notificationProvider);
 
     return Scaffold(
       body: CustomScrollView(
@@ -31,25 +36,21 @@ class StudentHomeScreen extends ConsumerWidget {
                 children: [
                   Stack(
                     children: [
-                      InkWell(
-                        onTap: () =>
-                            context.goNamed(AppRouteNames.studentProfile),
-                        customBorder: const CircleBorder(),
+                      GestureDetector(
+                        onTap: () => context.goNamed(AppRouteNames.studentProfile),
                         child: Container(
                           width: 44,
                           height: 44,
                           decoration: BoxDecoration(
                             shape: BoxShape.circle,
-                            border: Border.all(
-                                color: theme.colorScheme.primary, width: 2),
+                            border: Border.all(color: theme.colorScheme.primary, width: 2),
                           ),
                           clipBehavior: Clip.antiAlias,
-                          child: avatarUrl != null && avatarUrl.isNotEmpty
+                          child: (avatarUrl != null && avatarUrl.isNotEmpty)
                               ? Image.network(
                                   avatarUrl,
                                   fit: BoxFit.cover,
-                                  errorBuilder: (context, error, stackTrace) =>
-                                      _CircleAvatarFallback(
+                                  errorBuilder: (context, error, stackTrace) => _CircleAvatarFallback(
                                     size: 44,
                                     borderColor: theme.colorScheme.primary,
                                   ),
@@ -69,8 +70,7 @@ class StudentHomeScreen extends ConsumerWidget {
                           decoration: BoxDecoration(
                             color: Colors.green,
                             shape: BoxShape.circle,
-                            border: Border.all(
-                                color: theme.scaffoldBackgroundColor, width: 2),
+                            border: Border.all(color: theme.scaffoldBackgroundColor, width: 2),
                           ),
                         ),
                       ),
@@ -97,23 +97,31 @@ class StudentHomeScreen extends ConsumerWidget {
                       ],
                     ),
                   ),
+                  // Icon Chuông Thông báo với Badge
                   IconButton(
-                    onPressed: () {},
+                    onPressed: () => context.pushNamed(AppRouteNames.studentNotifications),
                     icon: Stack(
+                      clipBehavior: Clip.none,
                       children: [
                         const Icon(Icons.notifications_outlined, size: 28),
-                        Positioned(
-                          right: 4,
-                          top: 4,
-                          child: Container(
-                            width: 8,
-                            height: 8,
-                            decoration: const BoxDecoration(
-                              color: Colors.red,
-                              shape: BoxShape.circle,
+                        if (notificationState.unreadCount > 0)
+                          Positioned(
+                            right: -2,
+                            top: -2,
+                            child: Container(
+                              padding: const EdgeInsets.all(4),
+                              decoration: const BoxDecoration(
+                                color: Colors.red,
+                                shape: BoxShape.circle,
+                              ),
+                              constraints: const BoxConstraints(minWidth: 16, minHeight: 16),
+                              child: Text(
+                                '${notificationState.unreadCount}',
+                                style: const TextStyle(color: Colors.white, fontSize: 8, fontWeight: FontWeight.bold),
+                                textAlign: TextAlign.center,
+                              ),
                             ),
                           ),
-                        ),
                       ],
                     ),
                   ),
@@ -122,7 +130,7 @@ class StudentHomeScreen extends ConsumerWidget {
             ),
           ),
 
-          // Search Bar
+          // Các phần khác giữ nguyên...
           SliverToBoxAdapter(
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 20),
@@ -142,7 +150,6 @@ class StudentHomeScreen extends ConsumerWidget {
             ),
           ),
 
-          // Quick Access
           SliverToBoxAdapter(
             child: Padding(
               padding: const EdgeInsets.fromLTRB(20, 24, 20, 16),
@@ -162,8 +169,7 @@ class StudentHomeScreen extends ConsumerWidget {
                           subtitle: 'Xem lại kết quả',
                           icon: Icons.history,
                           color: Colors.orange,
-                          onTap: () =>
-                              context.goNamed(AppRouteNames.studentHistory),
+                          onTap: () => context.goNamed(AppRouteNames.studentHistory),
                         ),
                       ),
                       const SizedBox(width: 12),
@@ -173,8 +179,7 @@ class StudentHomeScreen extends ConsumerWidget {
                           subtitle: 'Top sinh viên',
                           icon: Icons.emoji_events,
                           color: Colors.purple,
-                          onTap: () =>
-                              context.goNamed(AppRouteNames.studentLeaderboard),
+                          onTap: () => context.goNamed(AppRouteNames.studentLeaderboard),
                         ),
                       ),
                     ],
@@ -184,7 +189,6 @@ class StudentHomeScreen extends ConsumerWidget {
             ),
           ),
 
-          // Tabs
           SliverPersistentHeader(
             pinned: true,
             delegate: _SliverAppBarDelegate(
@@ -199,25 +203,22 @@ class StudentHomeScreen extends ConsumerWidget {
                       _FilterChip(
                         label: 'Đang diễn ra',
                         isSelected: currentFilter == ContestStatus.live,
-                        onTap: () => ref
-                            .read(contestStatusFilterProvider.notifier)
-                            .state = ContestStatus.live,
+                        onTap: () => ref.read(contestStatusFilterProvider.notifier).state =
+                            ContestStatus.live,
                       ),
                       const SizedBox(width: 8),
                       _FilterChip(
                         label: 'Sắp diễn ra',
                         isSelected: currentFilter == ContestStatus.upcoming,
-                        onTap: () => ref
-                            .read(contestStatusFilterProvider.notifier)
-                            .state = ContestStatus.upcoming,
+                        onTap: () => ref.read(contestStatusFilterProvider.notifier).state =
+                            ContestStatus.upcoming,
                       ),
                       const SizedBox(width: 8),
                       _FilterChip(
                         label: 'Đã kết thúc',
                         isSelected: currentFilter == ContestStatus.finished,
-                        onTap: () => ref
-                            .read(contestStatusFilterProvider.notifier)
-                            .state = ContestStatus.finished,
+                        onTap: () => ref.read(contestStatusFilterProvider.notifier).state =
+                            ContestStatus.finished,
                       ),
                     ],
                   ),
@@ -226,7 +227,6 @@ class StudentHomeScreen extends ConsumerWidget {
             ),
           ),
 
-          // Contest List
           filteredContestsAsync.when(
             data: (contests) {
               if (contests.isEmpty) {
@@ -311,8 +311,7 @@ class _QuickAccessCard extends StatelessWidget {
                 children: [
                   Text(
                     title,
-                    style: const TextStyle(
-                        fontWeight: FontWeight.bold, fontSize: 13),
+                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
                   ),
                   Text(
                     subtitle,
@@ -351,9 +350,7 @@ class _FilterChip extends StatelessWidget {
           color: isSelected ? theme.colorScheme.primary : Colors.transparent,
           borderRadius: BorderRadius.circular(20),
           border: Border.all(
-            color: isSelected
-                ? theme.colorScheme.primary
-                : (Colors.grey[300] ?? Colors.grey),
+            color: isSelected ? theme.colorScheme.primary : (Colors.grey[300] ?? Colors.grey),
           ),
           boxShadow: isSelected
               ? [
@@ -404,12 +401,7 @@ class _ContestCard extends StatelessWidget {
               top: 0,
               bottom: 0,
               width: 4,
-              child: Container(
-                  decoration: const BoxDecoration(
-                      color: Colors.red,
-                      borderRadius: BorderRadius.only(
-                          topLeft: Radius.circular(4),
-                          bottomLeft: Radius.circular(4)))),
+              child: Container(decoration: const BoxDecoration(color: Colors.red, borderRadius: BorderRadius.only(topLeft: Radius.circular(4), bottomLeft: Radius.circular(4)))),
             ),
           Padding(
             padding: const EdgeInsets.all(16),
@@ -421,18 +413,14 @@ class _ContestCard extends StatelessWidget {
                   children: [
                     _StatusBadge(status: contest.status),
                     Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 8, vertical: 4),
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                       decoration: BoxDecoration(
                         color: isDark ? Colors.white10 : Colors.grey[100],
                         borderRadius: BorderRadius.circular(4),
                       ),
                       child: Text(
                         '${contest.durationMinutes} phút',
-                        style: const TextStyle(
-                            fontSize: 10,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.grey),
+                        style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.grey),
                       ),
                     ),
                   ],
@@ -440,8 +428,7 @@ class _ContestCard extends StatelessWidget {
                 const SizedBox(height: 12),
                 Text(
                   contest.title,
-                  style: const TextStyle(
-                      fontWeight: FontWeight.bold, fontSize: 16),
+                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
                 ),
                 const SizedBox(height: 4),
                 Text(
@@ -455,13 +442,11 @@ class _ContestCard extends StatelessWidget {
                     decoration: BoxDecoration(
                       color: theme.colorScheme.primary.withOpacity(0.05),
                       borderRadius: BorderRadius.circular(12),
-                      border: Border.all(
-                          color: theme.colorScheme.primary.withOpacity(0.1)),
+                      border: Border.all(color: theme.colorScheme.primary.withOpacity(0.1)),
                     ),
                     child: Row(
                       children: [
-                        Icon(Icons.schedule,
-                            size: 16, color: theme.colorScheme.primary),
+                        Icon(Icons.schedule, size: 16, color: theme.colorScheme.primary),
                         const SizedBox(width: 8),
                         Text(
                           'Bắt đầu lúc: 14:00 - Hôm nay',
@@ -477,24 +462,18 @@ class _ContestCard extends StatelessWidget {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      _ParticipantStack(
-                          avatars: contest.participantAvatars,
-                          total: contest.totalParticipants),
+                      _ParticipantStack(avatars: contest.participantAvatars, total: contest.totalParticipants),
                       ElevatedButton(
                         onPressed: () => context.pushNamed(
                           AppRouteNames.studentQuiz,
-                          pathParameters: {
-                            'contestId': contest.id
-                          }, // Truyền tham số ID cuộc thi
+                          pathParameters: {'contestId': contest.id}, // Truyền tham số ID cuộc thi
                         ),
                         style: ElevatedButton.styleFrom(
                           minimumSize: const Size(120, 36),
                           padding: const EdgeInsets.symmetric(horizontal: 16),
-                          shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(8)),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                         ),
-                        child: const Text('Tham gia ngay',
-                            style: TextStyle(fontSize: 13)),
+                        child: const Text('Tham gia ngay', style: TextStyle(fontSize: 13)),
                       ),
                     ],
                   ),
@@ -509,11 +488,9 @@ class _ContestCard extends StatelessWidget {
                             onPressed: () {},
                             style: OutlinedButton.styleFrom(
                               minimumSize: const Size(0, 40),
-                              shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(8)),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                             ),
-                            child: const Text('Chi tiết',
-                                style: TextStyle(fontSize: 13)),
+                            child: const Text('Chi tiết', style: TextStyle(fontSize: 13)),
                           ),
                         ),
                         const SizedBox(width: 12),
@@ -522,15 +499,12 @@ class _ContestCard extends StatelessWidget {
                             onPressed: () {},
                             style: ElevatedButton.styleFrom(
                               minimumSize: const Size(0, 40),
-                              backgroundColor:
-                                  theme.colorScheme.primary.withOpacity(0.1),
+                              backgroundColor: theme.colorScheme.primary.withOpacity(0.1),
                               foregroundColor: theme.colorScheme.primary,
                               elevation: 0,
-                              shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(8)),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                             ),
-                            child: const Text('Đăng ký',
-                                style: TextStyle(fontSize: 13)),
+                            child: const Text('Đăng ký', style: TextStyle(fontSize: 13)),
                           ),
                         ),
                       ],
@@ -566,16 +540,12 @@ class _StatusBadge extends StatelessWidget {
               Container(
                 width: 6,
                 height: 6,
-                decoration: const BoxDecoration(
-                    color: Colors.red, shape: BoxShape.circle),
+                decoration: const BoxDecoration(color: Colors.red, shape: BoxShape.circle),
               ),
               const SizedBox(width: 6),
               const Text(
                 'TRỰC TIẾP',
-                style: TextStyle(
-                    color: Colors.red,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 10),
+                style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold, fontSize: 10),
               ),
             ],
           ),
@@ -594,10 +564,7 @@ class _StatusBadge extends StatelessWidget {
               const SizedBox(width: 4),
               const Text(
                 'SẮP DIỄN RA',
-                style: TextStyle(
-                    color: Colors.blue,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 10),
+                style: TextStyle(color: Colors.blue, fontWeight: FontWeight.bold, fontSize: 10),
               ),
             ],
           ),
@@ -611,8 +578,7 @@ class _StatusBadge extends StatelessWidget {
           ),
           child: const Text(
             'ĐÃ KẾT THÚC',
-            style: TextStyle(
-                color: Colors.grey, fontWeight: FontWeight.bold, fontSize: 10),
+            style: TextStyle(color: Colors.grey, fontWeight: FontWeight.bold, fontSize: 10),
           ),
         );
     }
@@ -630,13 +596,11 @@ class _ParticipantStack extends StatelessWidget {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
     final visibleAvatars = avatars.length > 3 ? avatars.sublist(0, 3) : avatars;
-
+    
     return Row(
       children: [
         SizedBox(
-          width: (visibleAvatars.isEmpty
-              ? 0
-              : 28 + ((visibleAvatars.length - 1) * 18)),
+          width: (visibleAvatars.isEmpty ? 0 : 28 + ((visibleAvatars.length - 1) * 18)),
           height: 28,
           child: ListView.builder(
             scrollDirection: Axis.horizontal,
@@ -651,15 +615,13 @@ class _ParticipantStack extends StatelessWidget {
                   height: 28,
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
-                    border: Border.all(
-                        color: theme.scaffoldBackgroundColor, width: 2),
+                    border: Border.all(color: theme.scaffoldBackgroundColor, width: 2),
                   ),
                   clipBehavior: Clip.antiAlias,
                   child: Image.network(
                     visibleAvatars[index],
                     fit: BoxFit.cover,
-                    errorBuilder: (context, error, stackTrace) =>
-                        _CircleAvatarFallback(
+                    errorBuilder: (context, error, stackTrace) => _CircleAvatarFallback(
                       size: 28,
                       borderColor: theme.scaffoldBackgroundColor,
                     ),
@@ -670,11 +632,7 @@ class _ParticipantStack extends StatelessWidget {
           ),
         ),
         Transform.translate(
-          offset: Offset(
-              (visibleAvatars.isNotEmpty ? visibleAvatars.length - 1 : 0) *
-                      -10.0 +
-                  4.0,
-              0),
+          offset: Offset((visibleAvatars.isNotEmpty ? visibleAvatars.length - 1 : 0) * -10.0 + 4.0, 0),
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
             decoration: BoxDecoration(
@@ -683,8 +641,7 @@ class _ParticipantStack extends StatelessWidget {
             ),
             child: Text(
               '+$total',
-              style: const TextStyle(
-                  fontSize: 9, fontWeight: FontWeight.bold, color: Colors.grey),
+              style: const TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: Colors.grey),
             ),
           ),
         ),
@@ -734,8 +691,7 @@ class _SliverAppBarDelegate extends SliverPersistentHeaderDelegate {
   double get maxExtent => 72.0;
 
   @override
-  Widget build(
-      BuildContext context, double shrinkOffset, bool overlapsContent) {
+  Widget build(BuildContext context, double shrinkOffset, bool overlapsContent) {
     // Force the header to paint exactly within the sliver extent.
     return SizedBox.expand(child: child);
   }
