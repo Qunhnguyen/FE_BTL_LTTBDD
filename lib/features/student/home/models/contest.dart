@@ -4,12 +4,13 @@ class Contest {
   final String id;
   final String title;
   final String subjectId;
-  final String subjectName; // Thêm trường tên môn học
+  final String subjectName; 
   final String description;
   final int durationMinutes;
   final ContestStatus status;
   final DateTime? startTime;
   final DateTime? endTime;
+  final List<String> classroomIds; // Thêm classroomIds
   final List<String> participantAvatars;
   final int totalParticipants;
 
@@ -23,6 +24,7 @@ class Contest {
     required this.status,
     this.startTime,
     this.endTime,
+    this.classroomIds = const [],
     this.participantAvatars = const [],
     this.totalParticipants = 0,
   });
@@ -31,20 +33,21 @@ class Contest {
     final startAtStr = json['startAt'] ?? json['startTime'];
     final endAtStr = json['endAt'] ?? json['endTime'];
     
-    final startTime = startAtStr != null ? DateTime.parse(startAtStr) : null;
-    final endTime = endAtStr != null ? DateTime.parse(endAtStr) : null;
+    final startTime = startAtStr != null ? DateTime.tryParse(startAtStr.toString()) : null;
+    final endTime = endAtStr != null ? DateTime.tryParse(endAtStr.toString()) : null;
 
     return Contest(
       id: (json['id'] ?? json['_id'] ?? '').toString(),
       title: (json['name'] ?? json['title'] ?? 'Không có tên').toString(), 
       subjectId: (json['subjectId'] ?? '').toString(),
-      subjectName: sName ?? json['subjectName'] ?? 'Môn học', // Ưu tiên tên thật
+      subjectName: sName ?? json['subjectName'] ?? 'Môn học', 
       description: (json['description'] ?? '').toString(),
       durationMinutes: json['durationMinutes'] ?? 0,
       startTime: startTime,
       endTime: endTime,
       status: _calculateStatus(startTime, endTime),
-      participantAvatars: (json['participantAvatars'] as List<dynamic>?)?.map((e) => e.toString()).toList() ?? [],
+      classroomIds: List<String>.from(json['classroomIds'] ?? []),
+      participantAvatars: (json['participantAvatars'] as List? ?? []).map((e) => e.toString()).toList(),
       totalParticipants: json['totalParticipants'] ?? 0,
     );
   }

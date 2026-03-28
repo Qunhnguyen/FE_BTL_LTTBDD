@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/notification_model.dart';
 import '../repositories/notification_repository.dart';
+import '../../../auth/providers/auth_provider.dart';
 
 class NotificationState {
   final List<AppNotification> items;
@@ -29,15 +30,30 @@ class NotificationState {
 
 class NotificationNotifier extends StateNotifier<NotificationState> {
   final NotificationRepository _repository;
+  final Ref _ref;
   Timer? _timer;
 
-  NotificationNotifier(this._repository) : super(NotificationState()) {
-    fetchNotifications();
-    // Bật Polling mỗi 60 giây để cập nhật Badge
-    _timer = Timer.periodic(const Duration(seconds: 60), (_) => fetchNotifications());
+  NotificationNotifier(this._repository, this._ref) : super(NotificationState()) {
+    _init();
+  }
+
+  void _init() {
+    // Chỉ chạy nếu là Sinh viên
+    final authState = _ref.read(authProvider);
+    if (authState.user?.role == 'STUDENT') {
+      fetchNotifications();
+      // Bật Polling mỗi 60 giây
+      _timer = Timer.periodic(const Duration(seconds: 60), (_) => fetchNotifications());
+    }
   }
 
   Future<void> fetchNotifications() async {
+    // Kiểm tra role một lần nữa trước khi gọi API để chắc chắn
+    final authState = _ref.read(authProvider);
+    if (authState.user?.role != 'STUDENT') {
+      return;
+    }
+
     try {
       final data = await _repository.getNotifications();
       final List<dynamic> itemsRaw = data['items'] ?? [];
@@ -49,7 +65,10 @@ class NotificationNotifier extends StateNotifier<NotificationState> {
         isLoading: false,
       );
     } catch (e) {
-      print('Error fetching notifications: $e');
+      // Bỏ qua log lỗi 403 nếu lỡ gọi nhầm, để tránh làm rối console
+      if (!e.toString().contains('403')) {
+        print('Error fetching notifications: $e');
+      }
     }
   }
 
@@ -80,5 +99,5 @@ class NotificationNotifier extends StateNotifier<NotificationState> {
 
 final notificationProvider = StateNotifierProvider<NotificationNotifier, NotificationState>((ref) {
   final repo = ref.watch(notificationRepositoryProvider);
-  return NotificationNotifier(repo);
+  return NotificationNotifier(repo, ref);
 });
