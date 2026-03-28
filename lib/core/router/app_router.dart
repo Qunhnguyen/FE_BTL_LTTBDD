@@ -12,6 +12,7 @@ import '../../features/student/leaderboard/screens/leaderboard_screen.dart';
 import '../../features/student/profile/screens/student_profile_screen.dart';
 import '../../features/student/quiz/screens/quiz_result_screen.dart';
 import '../../features/student/quiz/screens/quiz_screen.dart';
+import '../../features/student/notifications/screens/notification_screen.dart';
 import '../../features/teacher/dashboard/screens/teacher_dashboard_screen.dart';
 import '../../features/teacher/questions/screens/question_management_screen.dart';
 import '../../features/teacher/settings/screens/teacher_settings_screen.dart';
@@ -44,6 +45,7 @@ class AppRouteNames {
   static const String studentResult = 'studentResult';
   static const String studentLeaderboard = 'studentLeaderboard';
   static const String studentProfile = 'studentProfile';
+  static const String studentNotifications = 'studentNotifications';
 
   // Teacher
   static const String teacherDashboard = 'teacherDashboard';
@@ -91,7 +93,31 @@ final routerProvider = Provider<GoRouter>((ref) {
         builder: (context, state) => const RoleSelectionScreen(),
       ),
       
-      // Màn hình Quiz Toàn màn hình - Tách khỏi Shell để tránh lỗi log
+      // Màn hình Quiz & Result Toàn màn hình
+      GoRoute(
+        path: '/student/quiz/:contestId',
+        name: AppRouteNames.studentQuiz,
+        parentNavigatorKey: _rootNavigatorKey,
+        builder: (context, state) {
+          final contestId = state.pathParameters['contestId']!;
+          return QuizScreen(contestId: contestId);
+        },
+      ),
+      GoRoute(
+        path: '/student/result',
+        name: AppRouteNames.studentResult,
+        parentNavigatorKey: _rootNavigatorKey,
+        builder: (context, state) => const QuizResultScreen(),
+      ),
+
+      // Màn hình Thông báo Toàn màn hình
+      GoRoute(
+        path: '/student/notifications',
+        name: AppRouteNames.studentNotifications,
+        parentNavigatorKey: _rootNavigatorKey,
+        builder: (context, state) => const NotificationScreen(),
+      ),
+
       // Student Shell
       StatefulShellRoute.indexedStack(
         builder: (context, state, navigationShell) {
@@ -105,17 +131,6 @@ final routerProvider = Provider<GoRouter>((ref) {
                 path: '/student/home',
                 name: AppRouteNames.studentHome,
                 builder: (context, state) => const StudentHomeScreen(),
-                routes: [
-                  GoRoute(
-                    parentNavigatorKey: _rootNavigatorKey,
-                    path: 'quiz/:contestId',
-                    name: AppRouteNames.studentQuiz,
-                    builder: (context, state) {
-                      final contestId = state.pathParameters['contestId']!;
-                      return QuizScreen(contestId: contestId);
-                    },
-                  ),
-                ],
               ),
             ],
           ),
@@ -150,14 +165,6 @@ final routerProvider = Provider<GoRouter>((ref) {
             ],
           ),
         ],
-      ),
-
-      ]
-      GoRoute(
-        parentNavigatorKey: _rootNavigatorKey,
-        path: '/student/result',
-        name: AppRouteNames.studentResult,
-        builder: (context, state) => const QuizResultScreen(),
       ),
 
       // Teacher Shell

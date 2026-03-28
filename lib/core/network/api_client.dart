@@ -31,8 +31,6 @@ final dioProvider = Provider<Dio>((ref) {
         return handler.next(options);
       },
       onError: (DioException e, handler) async {
-        // Khi gặp lỗi 401, chúng ta ném lỗi để tầng trên xử lý (ví dụ Router sẽ redirect)
-        // Bỏ việc gọi authProvider ở đây để tránh lỗi vòng lặp (Circular Dependency)
         return handler.next(e);
       },
     ),
@@ -113,6 +111,28 @@ class ApiClient {
       );
     } on DioException catch (e) {
       _logDioError('PUT', path, e);
+      throw AppFailure.fromDioError(e);
+    }
+  }
+
+  // Bổ sung phương thức PATCH cho các API cập nhật từng phần (như Notification)
+  Future<Response<T>> patch<T>(
+    String path, {
+    dynamic data,
+    Map<String, dynamic>? queryParameters,
+    Options? options,
+    CancelToken? cancelToken,
+  }) async {
+    try {
+      return await _dio.patch<T>(
+        path,
+        data: data,
+        queryParameters: queryParameters,
+        options: options,
+        cancelToken: cancelToken,
+      );
+    } on DioException catch (e) {
+      _logDioError('PATCH', path, e);
       throw AppFailure.fromDioError(e);
     }
   }
