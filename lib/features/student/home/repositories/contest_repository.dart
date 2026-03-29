@@ -4,6 +4,7 @@ import '../models/contest.dart';
 import '../../../teacher/dashboard/models/contest_analytics.dart';
 import '../../../teacher/dashboard/models/item_analysis.dart';
 import '../../../teacher/dashboard/models/scoreboard.dart';
+import '../../../teacher/dashboard/models/student_submission_detail.dart';
 import 'package:dio/dio.dart';
 
 final contestRepositoryProvider = Provider<ContestRepository>((ref) {
@@ -69,5 +70,10 @@ class ContestRepository {
       '/api/teacher/analytics/contests/$contestId/scoreboard/export',
       options: Options(responseType: ResponseType.bytes),
     );
+  }
+
+  Future<StudentSubmissionDetail> getStudentSubmissionDetail(String contestId, String studentId) async {
+    final response = await _apiClient.get('/api/teacher/analytics/contests/$contestId/submissions/$studentId');
+    return StudentSubmissionDetail.fromJson(response.data);
   }
 }
