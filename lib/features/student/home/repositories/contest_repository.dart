@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/network/api_client.dart';
 import '../models/contest.dart';
 import '../../../teacher/dashboard/models/contest_analytics.dart';
+import '../../../teacher/dashboard/models/item_analysis.dart';
 
 final contestRepositoryProvider = Provider<ContestRepository>((ref) {
   final apiClient = ref.watch(apiClientProvider);
@@ -49,5 +50,10 @@ class ContestRepository {
   Future<ContestAnalytics> getContestAnalytics(String contestId) async {
     final response = await _apiClient.get('/api/teacher/analytics/contests/$contestId');
     return ContestAnalytics.fromJson(response.data);
+  }
+
+  Future<ItemAnalysis> getItemAnalysis(String contestId) async {
+    final response = await _apiClient.get('/api/teacher/analytics/contests/$contestId/items');
+    return ItemAnalysis.fromJson(response.data);
   }
 }
