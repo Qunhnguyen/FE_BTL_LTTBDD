@@ -23,6 +23,9 @@ import '../../features/teacher/subjects/models/subject.dart';
 import '../../features/teacher/subjects/screens/subject_management_screen.dart';
 import '../../features/teacher/subjects/screens/teacher_contest_list_screen.dart';
 import '../../features/welcome/welcome_screen.dart';
+import '../../features/teacher/ai/screens/knowledge_management_screen.dart';
+import '../../features/teacher/ai/screens/ai_builder_screen.dart';
+import '../../features/teacher/ai/screens/ai_job_detail_screen.dart';
 
 final _rootNavigatorKey = GlobalKey<NavigatorState>();
 final _studentHomeKey = GlobalKey<NavigatorState>();
@@ -59,6 +62,11 @@ class AppRouteNames {
   static const String teacherQuestions = 'teacherQuestions';
   static const String teacherCsvImport = 'teacherCsvImport';
   static const String teacherSettings = 'teacherSettings';
+  
+  // Teacher AI
+  static const String teacherKnowledge = 'teacherKnowledge';
+  static const String teacherAiBuilder = 'teacherAiBuilder';
+  static const String teacherAiJobDetail = 'teacherAiJobDetail';
 }
 
 final routerProvider = Provider<GoRouter>((ref) {
@@ -229,6 +237,33 @@ final routerProvider = Provider<GoRouter>((ref) {
                         subject: Subject(id: subjectId, name: subjectName),
                       );
                     },
+                    routes: [
+                      GoRoute(
+                        path: 'knowledge',
+                        name: AppRouteNames.teacherKnowledge,
+                        builder: (context, state) {
+                          final subjectId = state.pathParameters['subjectId']!;
+                          return KnowledgeManagementScreen(subjectId: subjectId);
+                        },
+                      ),
+                      GoRoute(
+                        path: 'ai-builder',
+                        name: AppRouteNames.teacherAiBuilder,
+                        builder: (context, state) {
+                          final subjectId = state.pathParameters['subjectId']!;
+                          return AiBuilderScreen(subjectId: subjectId);
+                        },
+                      ),
+                      GoRoute(
+                        path: 'ai-jobs/:jobId',
+                        name: AppRouteNames.teacherAiJobDetail,
+                        builder: (context, state) {
+                          final subjectId = state.pathParameters['subjectId']!;
+                          final jobId = state.pathParameters['jobId']!;
+                          return AiJobDetailScreen(subjectId: subjectId, jobId: jobId);
+                        },
+                      ),
+                    ],
                   ),
                 ],
               ),
