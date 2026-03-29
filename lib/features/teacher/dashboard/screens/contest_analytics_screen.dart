@@ -2,9 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../student/home/repositories/contest_repository.dart';
 import '../models/contest_analytics.dart';
+import '../models/item_analysis.dart';
 
 final contestAnalyticsProvider = FutureProvider.family<ContestAnalytics, String>((ref, contestId) async {
   return ref.watch(contestRepositoryProvider).getContestAnalytics(contestId);
+});
+
+final itemAnalysisProvider = FutureProvider.family<ItemAnalysis, String>((ref, contestId) async {
+  return ref.watch(contestRepositoryProvider).getItemAnalysis(contestId);
 });
 
 class ContestAnalyticsScreen extends ConsumerWidget {
@@ -14,29 +19,131 @@ class ContestAnalyticsScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final analyticsAsync = ref.watch(contestAnalyticsProvider(contestId));
+    final itemAnalysisAsync = ref.watch(itemAnalysisProvider(contestId));
 
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Phân tích cuộc thi'),
-      ),
-      body: analyticsAsync.when(
-        data: (analytics) => SingleChildScrollView(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              _buildOverviewCard(analytics),
-              const SizedBox(height: 20),
-              _buildParticipationCard(analytics.participation),
-              const SizedBox(height: 20),
-              _buildScoreDistributionCard(analytics.scoreDistribution),
-              const SizedBox(height: 20),
-              _buildExtremeScoresCard(analytics),
+    return DefaultTabController(
+      length: 2,
+      child: Scaffold(
+        appBar: AppBar(
+          title: const Text('Phân tích cuộc thi'),
+          bottom: const TabBar(
+            tabs: [
+              Tab(text: 'Tổng quan'),
+              Tab(text: 'Chi tiết câu hỏi'),
             ],
           ),
         ),
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (err, stack) => Center(child: Text('Lỗi: $err')),
+        body: TabBarView(
+          children: [
+            analyticsAsync.when(
+              data: (analytics) => SingleChildScrollView(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _buildOverviewCard(analytics),
+                    const SizedBox(height: 20),
+                    _buildParticipationCard(analytics.participation),
+                    const SizedBox(height: 20),
+                    _buildScoreDistributionCard(analytics.scoreDistribution),
+                    const SizedBox(height: 20),
+                    _buildExtremeScoresCard(analytics),
+                  ],
+                ),
+              ),
+              loading: () => const Center(child: CircularProgressIndicator()),
+              error: (err, stack) => Center(child: Text('Lỗi: $err')),
+            ),
+            itemAnalysisAsync.when(
+              data: (itemAnalysis) => SingleChildScrollView(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _buildSectionHeader('Câu hỏi khó nhất'),
+                    ...itemAnalysis.hardestQuestions.map((q) => _buildQuestionCard(q, Colors.red[50]!)),
+                    const SizedBox(height: 20),
+                    _buildSectionHeader('Câu hỏi dễ nhất'),
+                    ...itemAnalysis.easiestQuestions.map((q) => _buildQuestionCard(q, Colors.green[50]!)),
+                    const SizedBox(height: 20),
+                    _buildSectionHeader('Phân tích lựa chọn'),
+                    ...itemAnalysis.optionAnalysis.map((oa) => _buildOptionAnalysisCard(oa)),
+                  ],
+                ),
+              ),
+              loading: () => const Center(child: CircularProgressIndicator()),
+              error: (err, stack) => Center(child: Text('Lỗi: $err')),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSectionHeader(String title) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8.0),
+      child: Text(
+        title,
+        style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+      ),
+    );
+  }
+
+  Widget _buildQuestionCard(QuestionAnalysis q, Color bgColor) {
+    return Card(
+      color: bgColor,
+      child: ListTile(
+        title: Text('Câu ${q.questionNo}: ${q.content}'),
+        subtitle: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const SizedBox(height: 4),
+            Row(
+              children: [
+                Text('Đúng: ${q.correctCount} (${q.correctRate}%)', style: const TextStyle(color: Colors.green, fontWeight: FontWeight.bold)),
+                const SizedBox(width: 16),
+                Text('Sai: ${q.wrongCount} (${q.wrongRate}%)', style: const TextStyle(color: Colors.red, fontWeight: FontWeight.bold)),
+              ],
+            ),
+            Text('Số lượt làm: ${q.attempts}'),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildOptionAnalysisCard(OptionAnalysis oa) {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Câu ${oa.questionNo}: ${oa.content}', style: const TextStyle(fontWeight: FontWeight.bold)),
+            const Divider(),
+            ...oa.optionCounts.entries.map((entry) {
+              final percentage = oa.attempts > 0 ? (entry.value / oa.attempts * 100).toStringAsFixed(1) : '0';
+              return Padding(
+                padding: const EdgeInsets.symmetric(vertical: 4),
+                child: Row(
+                  children: [
+                    SizedBox(width: 60, child: Text(entry.key, style: const TextStyle(fontWeight: FontWeight.w500))),
+                    Expanded(
+                      child: LinearProgressIndicator(
+                        value: oa.attempts > 0 ? entry.value / oa.attempts : 0,
+                        backgroundColor: Colors.grey[200],
+                        color: Colors.blue[300],
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Text('${entry.value} ($percentage%)'),
+                  ],
+                ),
+              );
+            }),
+          ],
+        ),
       ),
     );
   }
