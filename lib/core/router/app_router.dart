@@ -15,6 +15,7 @@ import '../../features/student/quiz/screens/quiz_screen.dart';
 import '../../features/student/notifications/screens/notification_screen.dart';
 import '../../features/teacher/dashboard/screens/teacher_dashboard_screen.dart';
 import '../../features/teacher/questions/screens/question_management_screen.dart';
+import '../../features/teacher/questions/screens/csv_import_screen.dart';
 import '../../features/teacher/settings/screens/teacher_settings_screen.dart';
 import '../../features/teacher/subjects/models/subject.dart';
 import '../../features/teacher/subjects/screens/subject_management_screen.dart';
@@ -52,6 +53,7 @@ class AppRouteNames {
   static const String teacherSubjects = 'teacherSubjects';
   static const String teacherContests = 'teacherContests';
   static const String teacherQuestions = 'teacherQuestions';
+  static const String teacherCsvImport = 'teacherCsvImport';
   static const String teacherSettings = 'teacherSettings';
 }
 
@@ -213,6 +215,13 @@ final routerProvider = Provider<GoRouter>((ref) {
                 path: '/teacher/questions',
                 name: AppRouteNames.teacherQuestions,
                 builder: (context, state) => const QuestionManagementScreen(),
+                routes: [
+                  GoRoute(
+                    path: 'import-csv',
+                    name: AppRouteNames.teacherCsvImport,
+                    builder: (context, state) => const CsvImportScreen(),
+                  ),
+                ],
               ),
             ],
           ),
