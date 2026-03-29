@@ -1,3 +1,4 @@
+import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/network/api_client.dart';
 import '../models/managed_question.dart';
@@ -30,5 +31,16 @@ class QuestionRepository {
   Future<ManagedQuestion> updateQuestion(String id, Map<String, dynamic> questionData) async {
     final response = await _apiClient.put('/api/admin/questions/$id', data: questionData);
     return ManagedQuestion.fromJson(response.data);
+  }
+
+  Future<void> importQuestionsFromCsv(String contestId, String filePath) async {
+    final formData = FormData.fromMap({
+      'file': await MultipartFile.fromFile(filePath),
+    });
+
+    await _apiClient.post(
+      '/api/admin/import-export/contests/$contestId/questions',
+      data: formData,
+    );
   }
 }

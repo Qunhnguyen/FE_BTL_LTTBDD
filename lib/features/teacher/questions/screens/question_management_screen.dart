@@ -35,6 +35,11 @@ class _QuestionManagementScreenState extends ConsumerState<QuestionManagementScr
           icon: const Icon(Icons.arrow_back),
         ),
         actions: [
+          IconButton(
+            onPressed: () => context.pushNamed(AppRouteNames.teacherCsvImport),
+            icon: const Icon(Icons.upload_file),
+            tooltip: 'Import CSV',
+          ),
           TextButton.icon(
             onPressed: () => _showAddQuestionDialog(context, ref, contestId),
             icon: const Icon(Icons.add, size: 18),
@@ -130,14 +135,21 @@ class _QuestionManagementScreenState extends ConsumerState<QuestionManagementScr
                                 style: TextStyle(color: Colors.grey, fontSize: 13, height: 1.5),
                               ),
                               const SizedBox(height: 20),
-                              ElevatedButton.icon(
-                                onPressed: () => _showAddQuestionDialog(context, ref, contestId),
-                                icon: const Icon(Icons.add),
-                                label: const Text('Thêm câu hỏi đầu tiên'),
-                                style: ElevatedButton.styleFrom(
-                                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                                ),
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  ElevatedButton.icon(
+                                    onPressed: () => _showAddQuestionDialog(context, ref, contestId),
+                                    icon: const Icon(Icons.add),
+                                    label: const Text('Thêm thủ công'),
+                                  ),
+                                  const SizedBox(width: 12),
+                                  OutlinedButton.icon(
+                                    onPressed: () => context.pushNamed(AppRouteNames.teacherCsvImport),
+                                    icon: const Icon(Icons.upload_file),
+                                    label: const Text('Import CSV'),
+                                  ),
+                                ],
                               ),
                             ],
                           ),
