@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:intl/intl.dart';
 import '../../../student/home/repositories/contest_repository.dart';
 import '../models/contest_analytics.dart';
 import '../models/item_analysis.dart';
+import '../models/scoreboard.dart';
 
 final contestAnalyticsProvider = FutureProvider.family<ContestAnalytics, String>((ref, contestId) async {
   return ref.watch(contestRepositoryProvider).getContestAnalytics(contestId);
@@ -10,6 +12,10 @@ final contestAnalyticsProvider = FutureProvider.family<ContestAnalytics, String>
 
 final itemAnalysisProvider = FutureProvider.family<ItemAnalysis, String>((ref, contestId) async {
   return ref.watch(contestRepositoryProvider).getItemAnalysis(contestId);
+});
+
+final scoreboardProvider = FutureProvider.family<Scoreboard, String>((ref, contestId) async {
+  return ref.watch(contestRepositoryProvider).getScoreboard(contestId);
 });
 
 class ContestAnalyticsScreen extends ConsumerWidget {
@@ -20,15 +26,18 @@ class ContestAnalyticsScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final analyticsAsync = ref.watch(contestAnalyticsProvider(contestId));
     final itemAnalysisAsync = ref.watch(itemAnalysisProvider(contestId));
+    final scoreboardAsync = ref.watch(scoreboardProvider(contestId));
 
     return DefaultTabController(
-      length: 2,
+      length: 3,
       child: Scaffold(
         appBar: AppBar(
           title: const Text('Phân tích cuộc thi'),
           bottom: const TabBar(
+            isScrollable: true,
             tabs: [
               Tab(text: 'Tổng quan'),
+              Tab(text: 'Bảng điểm'),
               Tab(text: 'Chi tiết câu hỏi'),
             ],
           ),
@@ -54,6 +63,11 @@ class ContestAnalyticsScreen extends ConsumerWidget {
               loading: () => const Center(child: CircularProgressIndicator()),
               error: (err, stack) => Center(child: Text('Lỗi: $err')),
             ),
+            scoreboardAsync.when(
+              data: (scoreboard) => _buildScoreboardView(scoreboard),
+              loading: () => const Center(child: CircularProgressIndicator()),
+              error: (err, stack) => Center(child: Text('Lỗi: $err')),
+            ),
             itemAnalysisAsync.when(
               data: (itemAnalysis) => SingleChildScrollView(
                 padding: const EdgeInsets.all(16),
@@ -76,6 +90,96 @@ class ContestAnalyticsScreen extends ConsumerWidget {
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildScoreboardView(Scoreboard scoreboard) {
+    return Column(
+      children: [
+        Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceAround,
+            children: [
+              _buildSummaryItem('Tổng', scoreboard.totalStudents.toString()),
+              _buildSummaryItem('Hoàn thành', scoreboard.completedCount.toString(), Colors.green),
+              _buildSummaryItem('Đang làm', scoreboard.inProgressCount.toString(), Colors.orange),
+              _buildSummaryItem('Vắng', scoreboard.absentCount.toString(), Colors.red),
+            ],
+          ),
+        ),
+        const Divider(height: 1),
+        Expanded(
+          child: SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: SingleChildScrollView(
+              child: DataTable(
+                columns: const [
+                  DataColumn(label: Text('Sinh viên')),
+                  DataColumn(label: Text('Lớp')),
+                  DataColumn(label: Text('Điểm')),
+                  DataColumn(label: Text('Trạng thái')),
+                  DataColumn(label: Text('Thời gian nộp')),
+                ],
+                rows: scoreboard.rows.map((row) {
+                  return DataRow(cells: [
+                    DataCell(Text(row.studentName)),
+                    DataCell(Text(row.classroomName)),
+                    DataCell(Text(row.score?.toStringAsFixed(1) ?? '-')),
+                    DataCell(_buildStatusBadge(row.status)),
+                    DataCell(Text(row.submittedAt != null 
+                        ? DateFormat('HH:mm dd/MM/yyyy').format(row.submittedAt!) 
+                        : '-')),
+                  ]);
+                }).toList(),
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildSummaryItem(String label, String value, [Color? color]) {
+    return Column(
+      children: [
+        Text(label, style: const TextStyle(fontSize: 12, color: Colors.grey)),
+        Text(value, style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: color)),
+      ],
+    );
+  }
+
+  Widget _buildStatusBadge(String status) {
+    Color color;
+    String text;
+    switch (status) {
+      case 'COMPLETED':
+        color = Colors.green;
+        text = 'Đã nộp';
+        break;
+      case 'IN_PROGRESS':
+        color = Colors.orange;
+        text = 'Đang làm';
+        break;
+      case 'ABSENT':
+        color = Colors.red;
+        text = 'Vắng';
+        break;
+      default:
+        color = Colors.grey;
+        text = status;
+    }
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.1),
+        border: Border.all(color: color),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Text(
+        text,
+        style: TextStyle(color: color, fontSize: 12, fontWeight: FontWeight.bold),
       ),
     );
   }
