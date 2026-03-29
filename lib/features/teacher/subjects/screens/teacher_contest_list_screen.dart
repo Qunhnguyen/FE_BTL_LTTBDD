@@ -24,6 +24,46 @@ class TeacherContestListScreen extends ConsumerWidget {
       child: Scaffold(
         appBar: AppBar(
           title: Text(subject.name),
+          actions: [
+            PopupMenuButton<String>(
+              onSelected: (value) {
+                if (value == 'knowledge') {
+                  context.pushNamed(
+                    AppRouteNames.teacherKnowledge,
+                    pathParameters: {'subjectId': subject.id},
+                  );
+                } else if (value == 'ai_builder') {
+                  context.pushNamed(
+                    AppRouteNames.teacherAiBuilder,
+                    pathParameters: {'subjectId': subject.id},
+                  );
+                }
+              },
+              itemBuilder: (context) => [
+                const PopupMenuItem(
+                  value: 'knowledge',
+                  child: Row(
+                    children: [
+                      Icon(Icons.auto_stories, color: Colors.blue),
+                      SizedBox(width: 8),
+                      Text('Quản lý Tri thức (RAG)'),
+                    ],
+                  ),
+                ),
+                const PopupMenuItem(
+                  value: 'ai_builder',
+                  child: Row(
+                    children: [
+                      Icon(Icons.psychology, color: Colors.purple),
+                      SizedBox(width: 8),
+                      Text('Tạo đề thi bằng AI'),
+                    ],
+                  ),
+                ),
+              ],
+              icon: const Icon(Icons.auto_fix_high),
+            ),
+          ],
           bottom: const TabBar(
             tabs: [
               Tab(icon: Icon(Icons.assignment_outlined), text: 'Cuộc thi'),
@@ -116,10 +156,29 @@ class _ContestsTab extends ConsumerWidget {
                   );
                 },
               ),
-        floatingActionButton: FloatingActionButton.extended(
-          onPressed: () => _showAddContestDialog(context, ref, subject.id),
-          label: const Text('Tạo cuộc thi'),
-          icon: const Icon(Icons.add),
+        floatingActionButton: Column(
+          mainAxisAlignment: MainAxisAlignment.end,
+          crossAxisAlignment: CrossAxisAlignment.end,
+          children: [
+            FloatingActionButton.extended(
+              heroTag: 'ai_fab',
+              onPressed: () => context.pushNamed(
+                AppRouteNames.teacherAiBuilder,
+                pathParameters: {'subjectId': subject.id},
+              ),
+              label: const Text('Tạo đề AI'),
+              icon: const Icon(Icons.psychology),
+              backgroundColor: Colors.purple,
+              foregroundColor: Colors.white,
+            ),
+            const SizedBox(height: 12),
+            FloatingActionButton.extended(
+              heroTag: 'standard_fab',
+              onPressed: () => _showAddContestDialog(context, ref, subject.id),
+              label: const Text('Tạo cuộc thi'),
+              icon: const Icon(Icons.add),
+            ),
+          ],
         ),
       ),
       loading: () => const Center(child: CircularProgressIndicator()),
@@ -146,7 +205,7 @@ class _ContestsTab extends ConsumerWidget {
 
   void _showAddContestDialog(BuildContext context, WidgetRef ref, String subjectId) async {
     final titleController = TextEditingController();
-    final descController = TextEditingController();
+    final descController = TextEditingController(text: '');
     final durationController = TextEditingController(text: '45');
     
     // Lấy danh sách lớp thật từ BE
