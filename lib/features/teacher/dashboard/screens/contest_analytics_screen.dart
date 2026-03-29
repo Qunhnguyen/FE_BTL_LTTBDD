@@ -1,6 +1,8 @@
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
+import 'package:file_picker/file_picker.dart';
 import '../../../student/home/repositories/contest_repository.dart';
 import '../models/contest_analytics.dart';
 import '../models/item_analysis.dart';
@@ -21,6 +23,38 @@ final scoreboardProvider = FutureProvider.family<Scoreboard, String>((ref, conte
 class ContestAnalyticsScreen extends ConsumerWidget {
   final String contestId;
   const ContestAnalyticsScreen({super.key, required this.contestId});
+
+  Future<void> _exportScoreboard(BuildContext context, WidgetRef ref) async {
+    try {
+      final response = await ref.read(contestRepositoryProvider).exportScoreboard(contestId);
+      final bytes = response.data as List<int>;
+      
+      final String fileName = 'scoreboard_${contestId}_${DateFormat('yyyyMMdd_HHmm').format(DateTime.now())}.csv';
+      
+      final String? outputFile = await FilePicker.platform.saveFile(
+        dialogTitle: 'Lưu bảng điểm CSV',
+        fileName: fileName,
+        type: FileType.custom,
+        allowedExtensions: ['csv'],
+        bytes: Uint8List.fromList(bytes),
+      );
+
+      if (outputFile != null && context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Đã xuất file thành công!'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Lỗi khi xuất file: $e'), backgroundColor: Colors.red),
+        );
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -64,7 +98,7 @@ class ContestAnalyticsScreen extends ConsumerWidget {
               error: (err, stack) => Center(child: Text('Lỗi: $err')),
             ),
             scoreboardAsync.when(
-              data: (scoreboard) => _buildScoreboardView(scoreboard),
+              data: (scoreboard) => _buildScoreboardView(context, ref, scoreboard),
               loading: () => const Center(child: CircularProgressIndicator()),
               error: (err, stack) => Center(child: Text('Lỗi: $err')),
             ),
@@ -94,18 +128,30 @@ class ContestAnalyticsScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildScoreboardView(Scoreboard scoreboard) {
+  Widget _buildScoreboardView(BuildContext context, WidgetRef ref, Scoreboard scoreboard) {
     return Column(
       children: [
         Padding(
           padding: const EdgeInsets.all(16.0),
           child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceAround,
             children: [
-              _buildSummaryItem('Tổng', scoreboard.totalStudents.toString()),
-              _buildSummaryItem('Hoàn thành', scoreboard.completedCount.toString(), Colors.green),
-              _buildSummaryItem('Đang làm', scoreboard.inProgressCount.toString(), Colors.orange),
-              _buildSummaryItem('Vắng', scoreboard.absentCount.toString(), Colors.red),
+              Expanded(
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceAround,
+                  children: [
+                    _buildSummaryItem('Tổng', scoreboard.totalStudents.toString()),
+                    _buildSummaryItem('Hoàn thành', scoreboard.completedCount.toString(), Colors.green),
+                    _buildSummaryItem('Đang làm', scoreboard.inProgressCount.toString(), Colors.orange),
+                    _buildSummaryItem('Vắng', scoreboard.absentCount.toString(), Colors.red),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 8),
+              IconButton(
+                onPressed: () => _exportScoreboard(context, ref),
+                icon: const Icon(Icons.file_download, color: Colors.blue),
+                tooltip: 'Xuất CSV',
+              ),
             ],
           ),
         ),
@@ -173,7 +219,7 @@ class ContestAnalyticsScreen extends ConsumerWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
+        color: color.withValues(alpha: 0.1),
         border: Border.all(color: color),
         borderRadius: BorderRadius.circular(12),
       ),

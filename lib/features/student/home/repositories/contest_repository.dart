@@ -4,6 +4,7 @@ import '../models/contest.dart';
 import '../../../teacher/dashboard/models/contest_analytics.dart';
 import '../../../teacher/dashboard/models/item_analysis.dart';
 import '../../../teacher/dashboard/models/scoreboard.dart';
+import 'package:dio/dio.dart';
 
 final contestRepositoryProvider = Provider<ContestRepository>((ref) {
   final apiClient = ref.watch(apiClientProvider);
@@ -61,5 +62,12 @@ class ContestRepository {
   Future<Scoreboard> getScoreboard(String contestId) async {
     final response = await _apiClient.get('/api/teacher/analytics/contests/$contestId/scoreboard');
     return Scoreboard.fromJson(response.data);
+  }
+
+  Future<Response> exportScoreboard(String contestId) async {
+    return await _apiClient.get(
+      '/api/teacher/analytics/contests/$contestId/scoreboard/export',
+      options: Options(responseType: ResponseType.bytes),
+    );
   }
 }
