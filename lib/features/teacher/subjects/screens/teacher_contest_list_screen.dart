@@ -83,13 +83,28 @@ class _ContestsTab extends ConsumerWidget {
                                 style: const TextStyle(color: Colors.blue, fontSize: 12, fontWeight: FontWeight.bold)),
                             ),
                           const SizedBox(height: 8),
-                          ElevatedButton.icon(
-                            onPressed: () {
-                              ref.read(activeContestIdProvider.notifier).state = contest.id;
-                              context.goNamed(AppRouteNames.teacherQuestions);
-                            },
-                            icon: const Icon(Icons.quiz_outlined, size: 18),
-                            label: const Text('Quản lý Câu hỏi'),
+                          Wrap(
+                            spacing: 8,
+                            children: [
+                              ElevatedButton.icon(
+                                onPressed: () {
+                                  ref.read(activeContestIdProvider.notifier).state = contest.id;
+                                  context.goNamed(AppRouteNames.teacherQuestions);
+                                },
+                                icon: const Icon(Icons.quiz_outlined, size: 18),
+                                label: const Text('Câu hỏi'),
+                              ),
+                              OutlinedButton.icon(
+                                onPressed: () {
+                                  context.pushNamed(
+                                    AppRouteNames.teacherContestAnalytics,
+                                    pathParameters: {'contestId': contest.id},
+                                  );
+                                },
+                                icon: const Icon(Icons.analytics_outlined, size: 18),
+                                label: const Text('Thống kê'),
+                              ),
+                            ],
                           ),
                         ],
                       ),
