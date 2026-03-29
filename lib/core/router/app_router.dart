@@ -15,6 +15,7 @@ import '../../features/student/quiz/screens/quiz_screen.dart';
 import '../../features/student/notifications/screens/notification_screen.dart';
 import '../../features/teacher/dashboard/screens/teacher_dashboard_screen.dart';
 import '../../features/teacher/dashboard/screens/contest_analytics_screen.dart';
+import '../../features/teacher/dashboard/screens/student_submission_detail_screen.dart';
 import '../../features/teacher/questions/screens/question_management_screen.dart';
 import '../../features/teacher/questions/screens/csv_import_screen.dart';
 import '../../features/teacher/settings/screens/teacher_settings_screen.dart';
@@ -54,6 +55,7 @@ class AppRouteNames {
   static const String teacherSubjects = 'teacherSubjects';
   static const String teacherContests = 'teacherContests';
   static const String teacherContestAnalytics = 'teacherContestAnalytics';
+  static const String teacherStudentSubmission = 'teacherStudentSubmission';
   static const String teacherQuestions = 'teacherQuestions';
   static const String teacherCsvImport = 'teacherCsvImport';
   static const String teacherSettings = 'teacherSettings';
@@ -192,6 +194,20 @@ final routerProvider = Provider<GoRouter>((ref) {
                   final contestId = state.pathParameters['contestId']!;
                   return ContestAnalyticsScreen(contestId: contestId);
                 },
+                routes: [
+                  GoRoute(
+                    path: 'submissions/:studentId',
+                    name: AppRouteNames.teacherStudentSubmission,
+                    builder: (context, state) {
+                      final contestId = state.pathParameters['contestId']!;
+                      final studentId = state.pathParameters['studentId']!;
+                      return StudentSubmissionDetailScreen(
+                        contestId: contestId,
+                        studentId: studentId,
+                      );
+                    },
+                  ),
+                ],
               ),
             ],
           ),
