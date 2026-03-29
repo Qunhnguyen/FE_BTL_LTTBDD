@@ -183,7 +183,7 @@ class TeacherDashboardScreen extends ConsumerWidget {
                         TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
               ),
               SingleChildScrollView(
-                scrollDirection: Axis.horizontal,
+                scrollDirection: Alignment.centerLeft != null ? Axis.horizontal : Axis.horizontal, // Fix for some older flutter versions if needed, but standard is fine
                 padding: const EdgeInsets.symmetric(horizontal: 20),
                 child: Row(
                   children: [
@@ -416,12 +416,19 @@ class _ExamListItem extends StatelessWidget {
             ),
           ),
           IconButton(
-            onPressed: () {},
+            onPressed: () {
+              if (exam.status == ExamStatus.finished) {
+                context.pushNamed(
+                  AppRouteNames.teacherContestAnalytics,
+                  pathParameters: {'contestId': exam.id},
+                );
+              }
+            },
             icon: Icon(
               exam.status == ExamStatus.finished
-                  ? Icons.visibility_outlined
+                  ? Icons.analytics_outlined
                   : Icons.edit_outlined,
-              color: Colors.grey,
+              color: exam.status == ExamStatus.finished ? Colors.blue : Colors.grey,
               size: 20,
             ),
           ),

@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/network/api_client.dart';
 import '../models/contest.dart';
+import '../../../teacher/dashboard/models/contest_analytics.dart';
 
 final contestRepositoryProvider = Provider<ContestRepository>((ref) {
   final apiClient = ref.watch(apiClientProvider);
@@ -18,7 +19,7 @@ class ContestRepository {
     return Contest.fromJson(response.data);
   }
 
-  // Admin endpoints
+  // Admin/Teacher endpoints
   Future<List<Contest>> getContestsBySubject(String subjectId) async {
     final response = await _apiClient.get('/api/admin/subjects/$subjectId/contests');
     final List<dynamic> data = response.data;
@@ -42,5 +43,11 @@ class ContestRepository {
       '/api/admin/subjects/$subjectId/contests/$contestId/import-questions',
       queryParameters: {'fileId': fileId},
     );
+  }
+
+  // Teacher Analytics
+  Future<ContestAnalytics> getContestAnalytics(String contestId) async {
+    final response = await _apiClient.get('/api/teacher/analytics/contests/$contestId');
+    return ContestAnalytics.fromJson(response.data);
   }
 }
