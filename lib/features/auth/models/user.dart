@@ -2,7 +2,7 @@ class User {
   final String id;
   final String email;
   final String name;
-  final String role; // 'STUDENT' or 'TEACHER'
+  final String role; // 'STUDENT', 'TEACHER', or 'ADMIN'
   final String? avatarFileId;
   final String? avatarUrl;
   final String? token;
