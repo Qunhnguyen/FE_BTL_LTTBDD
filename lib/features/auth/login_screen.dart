@@ -4,7 +4,7 @@ import 'package:go_router/go_router.dart';
 import '../../core/router/app_router.dart';
 import 'providers/auth_provider.dart';
 
-enum UserType { student, teacher }
+enum UserType { student, teacher, admin }
 
 final userTypeProvider = StateProvider<UserType>((ref) => UserType.student);
 final obscurePasswordProvider = StateProvider<bool>((ref) => true);
@@ -39,8 +39,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       if (next.status == AuthStatus.authenticated) {
         if (userType == UserType.student) {
           context.goNamed(AppRouteNames.studentHome);
-        } else {
+        } else if (userType == UserType.teacher) {
           context.goNamed(AppRouteNames.teacherDashboard);
+        } else {
+          context.goNamed(AppRouteNames.adminDashboard);
         }
       } else if (next.status == AuthStatus.error) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -96,7 +98,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   children: [
                     Expanded(
                       child: _SegmentButton(
-                        label: 'Sinh viên',
+                        label: 'SV',
                         isSelected: userType == UserType.student,
                         onTap: () => ref.read(userTypeProvider.notifier).state =
                             UserType.student,
@@ -104,10 +106,18 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     ),
                     Expanded(
                       child: _SegmentButton(
-                        label: 'Giảng viên',
+                        label: 'GV',
                         isSelected: userType == UserType.teacher,
                         onTap: () => ref.read(userTypeProvider.notifier).state =
                             UserType.teacher,
+                      ),
+                    ),
+                    Expanded(
+                      child: _SegmentButton(
+                        label: 'Admin',
+                        isSelected: userType == UserType.admin,
+                        onTap: () => ref.read(userTypeProvider.notifier).state =
+                            UserType.admin,
                       ),
                     ),
                   ],
@@ -120,7 +130,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    userType == UserType.student ? 'Email Sinh viên' : 'Email Giảng viên',
+                    userType == UserType.student 
+                        ? 'Email Sinh viên' 
+                        : (userType == UserType.teacher ? 'Email Giảng viên' : 'Email Quản trị viên'),
                     style: const TextStyle(fontWeight: FontWeight.bold),
                   ),
                   const SizedBox(height: 8),
@@ -190,7 +202,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     : () {
                         final email = _emailController.text.trim();
                         final password = _passwordController.text.trim();
-                        final role = userType == UserType.student ? 'STUDENT' : 'TEACHER';
+                        String role = 'STUDENT';
+                        if (userType == UserType.teacher) role = 'TEACHER';
+                        if (userType == UserType.admin) role = 'ADMIN';
                         
                         if (email.isNotEmpty && password.isNotEmpty) {
                           ref.read(authProvider.notifier).login(email, password, role);

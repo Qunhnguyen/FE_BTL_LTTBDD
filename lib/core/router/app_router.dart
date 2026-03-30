@@ -27,6 +27,17 @@ import '../../features/teacher/ai/screens/knowledge_management_screen.dart';
 import '../../features/teacher/ai/screens/ai_builder_screen.dart';
 import '../../features/teacher/ai/screens/ai_job_detail_screen.dart';
 
+import '../../features/admin/screens/admin_dashboard_screen.dart';
+import '../../features/admin/screens/admin_subject_screen.dart';
+import '../../features/admin/screens/admin_teacher_screen.dart';
+import '../../features/admin/screens/admin_student_screen.dart';
+import '../../features/admin/screens/admin_contest_list_screen.dart';
+import '../../features/admin/screens/admin_question_list_screen.dart';
+import '../../features/admin/screens/admin_settings_screen.dart';
+import '../../features/admin/screens/admin_knowledge_screen.dart';
+import '../../features/admin/screens/admin_ai_builder_screen.dart';
+import '../../features/admin/screens/admin_ai_job_detail_screen.dart';
+
 final _rootNavigatorKey = GlobalKey<NavigatorState>();
 final _studentHomeKey = GlobalKey<NavigatorState>();
 final _studentHistoryKey = GlobalKey<NavigatorState>();
@@ -36,6 +47,12 @@ final _teacherDashboardKey = GlobalKey<NavigatorState>();
 final _teacherSubjectsKey = GlobalKey<NavigatorState>();
 final _teacherQuestionsKey = GlobalKey<NavigatorState>();
 final _teacherSettingsKey = GlobalKey<NavigatorState>();
+
+final _adminDashboardKey = GlobalKey<NavigatorState>();
+final _adminSubjectsKey = GlobalKey<NavigatorState>();
+final _adminTeachersKey = GlobalKey<NavigatorState>();
+final _adminStudentsKey = GlobalKey<NavigatorState>();
+final _adminSettingsKey = GlobalKey<NavigatorState>();
 
 class AppRouteNames {
   AppRouteNames._();
@@ -67,6 +84,18 @@ class AppRouteNames {
   static const String teacherKnowledge = 'teacherKnowledge';
   static const String teacherAiBuilder = 'teacherAiBuilder';
   static const String teacherAiJobDetail = 'teacherAiJobDetail';
+
+  // Admin
+  static const String adminDashboard = 'adminDashboard';
+  static const String adminSubjects = 'adminSubjects';
+  static const String adminContests = 'adminContests';
+  static const String adminQuestions = 'adminQuestions';
+  static const String adminTeachers = 'adminTeachers';
+  static const String adminStudents = 'adminStudents';
+  static const String adminSettings = 'adminSettings';
+  static const String adminKnowledge = 'adminKnowledge';
+  static const String adminAiBuilder = 'adminAiBuilder';
+  static const String adminAiJobDetail = 'adminAiJobDetail';
 }
 
 final routerProvider = Provider<GoRouter>((ref) {
@@ -84,6 +113,8 @@ final routerProvider = Provider<GoRouter>((ref) {
       if (isAuthenticated && (isLoggingIn || isAtWelcome)) {
         if (authState.user?.role == 'TEACHER') {
           return '/teacher/dashboard';
+        } else if (authState.user?.role == 'ADMIN') {
+          return '/admin/dashboard';
         }
         return '/student/home';
       }
@@ -135,7 +166,7 @@ final routerProvider = Provider<GoRouter>((ref) {
       // Student Shell
       StatefulShellRoute.indexedStack(
         builder: (context, state, navigationShell) {
-          return MainShell(navigationShell: navigationShell, isStudent: true);
+          return MainShell(navigationShell: navigationShell, role: 'STUDENT');
         },
         branches: [
           StatefulShellBranch(
@@ -184,7 +215,7 @@ final routerProvider = Provider<GoRouter>((ref) {
       // Teacher Shell
       StatefulShellRoute.indexedStack(
         builder: (context, state, navigationShell) {
-          return MainShell(navigationShell: navigationShell, isStudent: false);
+          return MainShell(navigationShell: navigationShell, role: 'TEACHER');
         },
         branches: [
           StatefulShellBranch(
@@ -293,6 +324,119 @@ final routerProvider = Provider<GoRouter>((ref) {
                 path: '/teacher/settings',
                 name: AppRouteNames.teacherSettings,
                 builder: (context, state) => const TeacherSettingsScreen(),
+              ),
+            ],
+          ),
+        ],
+      ),
+
+      // Admin Shell
+      StatefulShellRoute.indexedStack(
+        builder: (context, state, navigationShell) {
+          return MainShell(navigationShell: navigationShell, role: 'ADMIN');
+        },
+        branches: [
+          StatefulShellBranch(
+            navigatorKey: _adminDashboardKey,
+            routes: [
+              GoRoute(
+                path: '/admin/dashboard',
+                name: AppRouteNames.adminDashboard,
+                builder: (context, state) => const AdminDashboardScreen(),
+              ),
+            ],
+          ),
+          StatefulShellBranch(
+            navigatorKey: _adminSubjectsKey,
+            routes: [
+              GoRoute(
+                path: '/admin/subjects',
+                name: AppRouteNames.adminSubjects,
+                builder: (context, state) => const AdminSubjectScreen(),
+                routes: [
+                  GoRoute(
+                    path: ':subjectId/contests',
+                    name: AppRouteNames.adminContests,
+                    builder: (context, state) {
+                      final subjectId = state.pathParameters['subjectId']!;
+                      final subjectName = state.uri.queryParameters['name'] ?? 'Môn học';
+                      return AdminContestListScreen(
+                        subjectId: subjectId,
+                        subjectName: subjectName,
+                      );
+                    },
+                    routes: [
+                      GoRoute(
+                        path: ':contestId/questions',
+                        name: AppRouteNames.adminQuestions,
+                        builder: (context, state) {
+                          final contestId = state.pathParameters['contestId']!;
+                          final contestName = state.uri.queryParameters['name'] ?? 'Kỳ thi';
+                          return AdminQuestionListScreen(
+                            contestId: contestId,
+                            contestName: contestName,
+                          );
+                        },
+                      ),
+                    ],
+                  ),
+                  GoRoute(
+                    path: ':subjectId/knowledge',
+                    name: AppRouteNames.adminKnowledge,
+                    builder: (context, state) {
+                      final subjectId = state.pathParameters['subjectId']!;
+                      final subjectName = state.uri.queryParameters['name'] ?? 'Môn học';
+                      return AdminKnowledgeScreen(subjectId: subjectId, subjectName: subjectName);
+                    },
+                  ),
+                  GoRoute(
+                    path: ':subjectId/ai-builder',
+                    name: AppRouteNames.adminAiBuilder,
+                    builder: (context, state) {
+                      final subjectId = state.pathParameters['subjectId']!;
+                      return AdminAiBuilderScreen(subjectId: subjectId);
+                    },
+                  ),
+                  GoRoute(
+                    path: ':subjectId/ai-jobs/:jobId',
+                    name: AppRouteNames.adminAiJobDetail,
+                    builder: (context, state) {
+                      final subjectId = state.pathParameters['subjectId']!;
+                      final jobId = state.pathParameters['jobId']!;
+                      return AdminAiJobDetailScreen(subjectId: subjectId, jobId: jobId);
+                    },
+                  ),
+                ],
+              ),
+            ],
+          ),
+          StatefulShellBranch(
+            navigatorKey: _adminTeachersKey,
+            routes: [
+              GoRoute(
+                path: '/admin/teachers',
+                name: AppRouteNames.adminTeachers,
+                builder: (context, state) => const AdminTeacherScreen(),
+              ),
+            ],
+          ),
+          StatefulShellBranch(
+            navigatorKey: _adminStudentsKey,
+            routes: [
+              GoRoute(
+                path: '/admin/students',
+                name: AppRouteNames.adminStudents,
+                builder: (context, state) => const AdminStudentScreen(),
+              ),
+            ],
+          ),
+          StatefulShellBranch(
+            navigatorKey: _adminSettingsKey,
+            routes: [
+              GoRoute(
+                path: '/admin/settings',
+                name: AppRouteNames.adminSettings,
+                builder: (context, state) => const AdminSettingsScreen(),
               ),
             ],
           ),

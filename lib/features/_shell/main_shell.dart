@@ -3,22 +3,35 @@ import 'package:go_router/go_router.dart';
 
 class MainShell extends StatelessWidget {
   final StatefulNavigationShell navigationShell;
-  final bool isStudent;
+  final String role; // 'STUDENT', 'TEACHER', or 'ADMIN'
 
   const MainShell({
     super.key,
     required this.navigationShell,
-    required this.isStudent,
+    required this.role,
   });
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       body: navigationShell,
-      bottomNavigationBar: isStudent ? _buildStudentNav(context) : _buildTeacherNav(context),
-      floatingActionButton: !isStudent ? _buildTeacherFAB(context) : null,
+      bottomNavigationBar: _buildBottomBar(context),
+      floatingActionButton: role == 'TEACHER' ? _buildTeacherFAB(context) : null,
       floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
     );
+  }
+
+  Widget? _buildBottomBar(BuildContext context) {
+    switch (role) {
+      case 'STUDENT':
+        return _buildStudentNav(context);
+      case 'TEACHER':
+        return _buildTeacherNav(context);
+      case 'ADMIN':
+        return _buildAdminNav(context);
+      default:
+        return null;
+    }
   }
 
   Widget _buildStudentNav(BuildContext context) {
@@ -89,6 +102,46 @@ class MainShell extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildAdminNav(BuildContext context) {
+    return BottomNavigationBar(
+      currentIndex: navigationShell.currentIndex,
+      onTap: (index) => navigationShell.goBranch(index),
+      type: BottomNavigationBarType.fixed,
+      selectedFontSize: 10,
+      unselectedFontSize: 10,
+      selectedItemColor: Theme.of(context).colorScheme.primary,
+      unselectedItemColor: Colors.grey,
+      showUnselectedLabels: true,
+      items: const [
+        BottomNavigationBarItem(
+          icon: Icon(Icons.dashboard_outlined),
+          activeIcon: Icon(Icons.dashboard),
+          label: 'Tổng quan',
+        ),
+        BottomNavigationBarItem(
+          icon: Icon(Icons.book_outlined),
+          activeIcon: Icon(Icons.book),
+          label: 'Môn học',
+        ),
+        BottomNavigationBarItem(
+          icon: Icon(Icons.person_outline),
+          activeIcon: Icon(Icons.person),
+          label: 'Giảng viên',
+        ),
+        BottomNavigationBarItem(
+          icon: Icon(Icons.school_outlined),
+          activeIcon: Icon(Icons.school),
+          label: 'Sinh viên',
+        ),
+        BottomNavigationBarItem(
+          icon: Icon(Icons.settings_outlined),
+          activeIcon: Icon(Icons.settings),
+          label: 'Cài đặt',
+        ),
+      ],
     );
   }
 
