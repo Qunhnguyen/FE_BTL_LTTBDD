@@ -1,15 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
+import 'package:go_router/go_router.dart';
 import '../../../student/home/repositories/contest_repository.dart';
 import '../models/student_submission_detail.dart';
 
-final studentSubmissionDetailProvider = FutureProvider.family<StudentSubmissionDetail, ({String contestId, String studentId})>((ref, arg) async {
-  return ref.watch(contestRepositoryProvider).getStudentSubmissionDetail(arg.contestId, arg.studentId);
+final studentSubmissionDetailProvider = FutureProvider.family<StudentSubmissionDetail, ({String id, String studentId, bool isQuiz})>((ref, arg) async {
+  return ref.watch(contestRepositoryProvider).getStudentSubmissionDetail(arg.id, arg.studentId, isQuiz: arg.isQuiz);
 });
 
 class StudentSubmissionDetailScreen extends ConsumerWidget {
-  final String contestId;
+  final String contestId; // ID này có thể là quizId hoặc contestId
   final String studentId;
 
   const StudentSubmissionDetailScreen({
@@ -20,24 +21,27 @@ class StudentSubmissionDetailScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final detailAsync = ref.watch(studentSubmissionDetailProvider((contestId: contestId, studentId: studentId)));
+    final theme = Theme.of(context);
+    final state = GoRouterState.of(context);
+    final isQuiz = state.uri.queryParameters['isQuiz'] == 'true';
+
+    final detailAsync = ref.watch(studentSubmissionDetailProvider((id: contestId, studentId: studentId, isQuiz: isQuiz)));
 
     return Scaffold(
+      backgroundColor: theme.scaffoldBackgroundColor,
       appBar: AppBar(
-        title: const Text('Chi tiết bài làm'),
+        title: Text(isQuiz ? 'Chi tiết bài Quiz' : 'Chi tiết bài Contest'),
+        elevation: 0,
       ),
       body: detailAsync.when(
         data: (detail) => SingleChildScrollView(
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.all(20),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              _buildInfoCard(detail),
-              const SizedBox(height: 20),
-              const Text(
-                'Danh sách câu trả lời',
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-              ),
+              _buildInfoCard(detail, theme),
+              const SizedBox(height: 24),
+              Text('DANH SÁCH CÂU TRẢ LỜI', style: theme.textTheme.labelSmall?.copyWith(fontWeight: FontWeight.bold, letterSpacing: 1.2)),
               const SizedBox(height: 12),
               ListView.builder(
                 shrinkWrap: true,
@@ -45,7 +49,7 @@ class StudentSubmissionDetailScreen extends ConsumerWidget {
                 itemCount: detail.answers.length,
                 itemBuilder: (context, index) {
                   final answer = detail.answers[index];
-                  return _buildAnswerCard(answer);
+                  return _buildAnswerCard(answer, theme);
                 },
               ),
             ],
@@ -57,152 +61,128 @@ class StudentSubmissionDetailScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildInfoCard(StudentSubmissionDetail detail) {
-    final dateFormat = DateFormat('HH:mm:ss dd/MM/yyyy');
-    return Card(
-      elevation: 2,
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              detail.studentName,
-              style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-            ),
-            Text('MSSV: ${detail.studentId}', style: TextStyle(color: Colors.grey[600])),
-            const Divider(height: 24),
-            _buildInfoRow('Cuộc thi:', detail.contestName),
-            _buildInfoRow('Trạng thái:', _getStatusText(detail.status), valueColor: _getStatusColor(detail.status)),
-            _buildInfoRow('Điểm số:', '${detail.totalScore}', valueColor: Colors.blue, isBold: true),
-            _buildInfoRow('Số câu đúng:', '${detail.correctCount}/${detail.totalQuestions}'),
-            if (detail.startedAt != null)
-              _buildInfoRow('Bắt đầu:', dateFormat.format(detail.startedAt!)),
-            if (detail.submittedAt != null)
-              _buildInfoRow('Nộp bài:', dateFormat.format(detail.submittedAt!)),
-            if (detail.startedAt != null && detail.submittedAt != null)
-              _buildInfoRow('Thời gian làm:', '${detail.submittedAt!.difference(detail.startedAt!).inMinutes} phút'),
-          ],
-        ),
+  Widget _buildInfoCard(StudentSubmissionDetail detail, ThemeData theme) {
+    final dateFormat = DateFormat('HH:mm dd/MM/yyyy');
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: theme.cardColor,
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              CircleAvatar(backgroundColor: theme.colorScheme.primary.withOpacity(0.1), child: Text(detail.studentName[0])),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(detail.studentName, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                    Text('Mã sinh viên: ${detail.studentId}', style: const TextStyle(color: Colors.grey, fontSize: 12)),
+                  ],
+                ),
+              ),
+              _StatusBadge(status: detail.status),
+            ],
+          ),
+          const Divider(height: 32),
+          _infoRow('Bài thi:', detail.contestName, theme),
+          _infoRow('Tổng điểm:', '${detail.totalScore}', theme, valueColor: theme.colorScheme.primary, isBold: true),
+          _infoRow('Số câu đúng:', '${detail.correctCount}/${detail.totalQuestions}', theme),
+          if (detail.submittedAt != null)
+            _infoRow('Thời gian nộp:', dateFormat.format(detail.submittedAt!), theme),
+        ],
       ),
     );
   }
 
-  Widget _buildInfoRow(String label, String value, {Color? valueColor, bool isBold = false}) {
+  Widget _infoRow(String label, String value, ThemeData theme, {Color? valueColor, bool isBold = false}) {
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4),
+      padding: const EdgeInsets.symmetric(vertical: 6),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(label, style: const TextStyle(fontWeight: FontWeight.w500)),
-          Text(
-            value,
-            style: TextStyle(
-              color: valueColor,
-              fontWeight: isBold ? FontWeight.bold : FontWeight.normal,
-            ),
+          Text(label, style: const TextStyle(color: Colors.grey, fontSize: 13)),
+          Text(value, style: TextStyle(color: valueColor, fontWeight: isBold ? FontWeight.bold : FontWeight.w600, fontSize: 14)),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildAnswerCard(AnswerDetail answer, ThemeData theme) {
+    final isCorrect = answer.correct;
+    final color = isCorrect ? Colors.green : Colors.red;
+    
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: theme.cardColor,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: color.withOpacity(0.1)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(6),
+                decoration: BoxDecoration(color: color.withOpacity(0.1), shape: BoxShape.circle),
+                child: Text('${answer.questionNo}', style: TextStyle(color: color, fontWeight: FontWeight.bold, fontSize: 12)),
+              ),
+              const SizedBox(width: 12),
+              Expanded(child: Text(answer.content, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500))),
+              Icon(isCorrect ? Icons.check_circle_rounded : Icons.cancel_rounded, color: color, size: 20),
+            ],
+          ),
+          const Divider(height: 24),
+          Row(
+            children: [
+              _optionLabel('Đã chọn:', answer.selectedOption ?? 'N/A', color),
+              const SizedBox(width: 20),
+              _optionLabel('Đáp án đúng:', answer.correctOption ?? 'N/A', Colors.blue),
+            ],
           ),
         ],
       ),
     );
   }
 
-  Widget _buildAnswerCard(AnswerDetail answer) {
-    final color = answer.correct ? Colors.green : Colors.red;
-    return Card(
-      margin: const EdgeInsets.only(bottom: 12),
-      shape: RoundedRectangleBorder(
-        side: BorderSide(color: color.withValues(alpha: 0.3)),
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(12),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                CircleAvatar(
-                  radius: 14,
-                  backgroundColor: color,
-                  child: Text(
-                    '${answer.questionNo}',
-                    style: const TextStyle(color: Colors.white, fontSize: 12),
-                  ),
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    answer.content,
-                    style: const TextStyle(fontWeight: FontWeight.bold),
-                  ),
-                ),
-                Icon(
-                  answer.correct ? Icons.check_circle : Icons.cancel,
-                  color: color,
-                ),
-              ],
-            ),
-            const Divider(),
-            Row(
-              children: [
-                Expanded(
-                  child: _buildOptionLabel('Chọn:', answer.selectedOption ?? 'N/A', 
-                      answer.correct ? Colors.green : Colors.red),
-                ),
-                Expanded(
-                  child: _buildOptionLabel('Đáp án:', answer.correctOption ?? 'N/A', Colors.blue),
-                ),
-              ],
-            ),
-            if (answer.answeredAt != null)
-              Padding(
-                padding: const EdgeInsets.only(top: 8.0),
-                child: Text(
-                  'Trả lời lúc: ${DateFormat('HH:mm:ss').format(answer.answeredAt!)}',
-                  style: TextStyle(fontSize: 11, color: Colors.grey[600]),
-                ),
-              ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildOptionLabel(String label, String option, Color color) {
+  Widget _optionLabel(String label, String val, Color color) {
     return Row(
       children: [
-        Text('$label ', style: const TextStyle(fontSize: 13)),
+        Text('$label ', style: const TextStyle(fontSize: 11, color: Colors.grey)),
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-          decoration: BoxDecoration(
-            color: color.withValues(alpha: 0.1),
-            borderRadius: BorderRadius.circular(4),
-          ),
-          child: Text(
-            option,
-            style: TextStyle(color: color, fontWeight: FontWeight.bold),
-          ),
+          decoration: BoxDecoration(color: color.withOpacity(0.1), borderRadius: BorderRadius.circular(4)),
+          child: Text(val, style: TextStyle(color: color, fontWeight: FontWeight.bold, fontSize: 12)),
         ),
       ],
     );
   }
+}
 
-  String _getStatusText(String status) {
-    switch (status) {
-      case 'COMPLETED': return 'Hoàn thành';
-      case 'IN_PROGRESS': return 'Đang làm';
-      case 'ABSENT': return 'Vắng mặt';
-      default: return status;
-    }
-  }
+class _StatusBadge extends StatelessWidget {
+  final String status;
+  const _StatusBadge({required this.status});
 
-  Color _getStatusColor(String status) {
-    switch (status) {
-      case 'COMPLETED': return Colors.green;
-      case 'IN_PROGRESS': return Colors.orange;
-      case 'ABSENT': return Colors.red;
-      default: return Colors.grey;
-    }
+  @override
+  Widget build(BuildContext context) {
+    Color color = Colors.grey;
+    String text = status;
+    if (status == 'COMPLETED') { color = Colors.green; text = 'Đã nộp'; }
+    else if (status == 'IN_PROGRESS') { color = Colors.orange; text = 'Đang làm'; }
+    else if (status == 'ABSENT') { color = Colors.red; text = 'Vắng'; }
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+      decoration: BoxDecoration(color: color.withOpacity(0.1), borderRadius: BorderRadius.circular(20), border: Border.all(color: color.withOpacity(0.3))),
+      child: Text(text, style: TextStyle(color: color, fontSize: 10, fontWeight: FontWeight.bold)),
+    );
   }
 }

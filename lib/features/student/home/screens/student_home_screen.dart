@@ -3,8 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../core/router/app_router.dart';
 import '../../../auth/providers/auth_provider.dart';
-import '../providers/contest_provider.dart';
-import '../models/contest.dart';
+import '../../../teacher/subjects/providers/subject_providers.dart';
 import '../../notifications/providers/notification_provider.dart';
 
 class StudentHomeScreen extends ConsumerWidget {
@@ -14,15 +13,14 @@ class StudentHomeScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
-    final currentFilter = ref.watch(contestStatusFilterProvider);
-    final filteredContestsAsync = ref.watch(filteredContestsProvider);
+    final subjectsAsync = ref.watch(subjectsProvider);
     final authState = ref.watch(authProvider);
     
     final user = authState.user;
     final userName = user?.name ?? 'Người dùng';
     final avatarUrl = user?.avatarUrl;
 
-    // Lắng nghe trạng thái thông báo
+    // LẤY TRẠNG THÁI THÔNG BÁO ĐỂ HIỂN THỊ SỐ (BADGE)
     final notificationState = ref.watch(notificationProvider);
 
     return Scaffold(
@@ -34,86 +32,46 @@ class StudentHomeScreen extends ConsumerWidget {
               padding: const EdgeInsets.fromLTRB(20, 48, 20, 16),
               child: Row(
                 children: [
-                  Stack(
-                    children: [
-                      GestureDetector(
-                        onTap: () => context.goNamed(AppRouteNames.studentProfile),
-                        child: Container(
-                          width: 44,
-                          height: 44,
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            border: Border.all(color: theme.colorScheme.primary, width: 2),
-                          ),
-                          clipBehavior: Clip.antiAlias,
-                          child: (avatarUrl != null && avatarUrl.isNotEmpty)
-                              ? Image.network(
-                                  avatarUrl,
-                                  fit: BoxFit.cover,
-                                  errorBuilder: (context, error, stackTrace) => _CircleAvatarFallback(
-                                    size: 44,
-                                    borderColor: theme.colorScheme.primary,
-                                  ),
-                                )
-                              : _CircleAvatarFallback(
-                                  size: 44,
-                                  borderColor: theme.colorScheme.primary,
-                                ),
-                        ),
+                  GestureDetector(
+                    onTap: () => context.goNamed(AppRouteNames.studentProfile),
+                    child: Container(
+                      width: 44,
+                      height: 44,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        border: Border.all(color: theme.colorScheme.primary, width: 2),
                       ),
-                      Positioned(
-                        bottom: 0,
-                        right: 0,
-                        child: Container(
-                          width: 12,
-                          height: 12,
-                          decoration: BoxDecoration(
-                            color: Colors.green,
-                            shape: BoxShape.circle,
-                            border: Border.all(color: theme.scaffoldBackgroundColor, width: 2),
-                          ),
-                        ),
-                      ),
-                    ],
+                      clipBehavior: Clip.antiAlias,
+                      child: (avatarUrl != null && avatarUrl.isNotEmpty)
+                          ? Image.network(avatarUrl, fit: BoxFit.cover)
+                          : const Icon(Icons.person),
+                    ),
                   ),
                   const SizedBox(width: 12),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(
-                          'Xin chào,',
-                          style: theme.textTheme.bodySmall?.copyWith(
-                            color: Colors.grey,
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
-                        Text(
-                          '$userName!',
-                          style: theme.textTheme.titleMedium?.copyWith(
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
+                        const Text('Xin chào,', style: TextStyle(color: Colors.grey, fontSize: 12)),
+                        Text(userName, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
                       ],
                     ),
                   ),
-                  // Icon Chuông Thông báo với Badge
+                  
+                  // ICON CHUÔNG CÓ HIỂN THỊ SỐ THÔNG BÁO
                   IconButton(
                     onPressed: () => context.pushNamed(AppRouteNames.studentNotifications),
                     icon: Stack(
                       clipBehavior: Clip.none,
                       children: [
-                        const Icon(Icons.notifications_outlined, size: 28),
+                        const Icon(Icons.notifications_none_rounded, size: 28),
                         if (notificationState.unreadCount > 0)
                           Positioned(
                             right: -2,
                             top: -2,
                             child: Container(
                               padding: const EdgeInsets.all(4),
-                              decoration: const BoxDecoration(
-                                color: Colors.red,
-                                shape: BoxShape.circle,
-                              ),
+                              decoration: const BoxDecoration(color: Colors.red, shape: BoxShape.circle),
                               constraints: const BoxConstraints(minWidth: 16, minHeight: 16),
                               child: Text(
                                 '${notificationState.unreadCount}',
@@ -130,134 +88,92 @@ class StudentHomeScreen extends ConsumerWidget {
             ),
           ),
 
-          // Các phần khác giữ nguyên...
+          // Search Bar
           SliverToBoxAdapter(
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 20),
               child: TextField(
                 decoration: InputDecoration(
-                  hintText: 'Tìm kiếm cuộc thi...',
+                  hintText: 'Tìm kiếm môn học...',
                   prefixIcon: const Icon(Icons.search),
                   filled: true,
                   fillColor: isDark ? Colors.white10 : Colors.grey[100],
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(16),
-                    borderSide: BorderSide.none,
-                  ),
-                  contentPadding: const EdgeInsets.symmetric(vertical: 0),
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide.none),
                 ),
               ),
             ),
           ),
 
+          // Quick Access
           SliverToBoxAdapter(
             child: Padding(
-              padding: const EdgeInsets.fromLTRB(20, 24, 20, 16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+              padding: const EdgeInsets.all(20),
+              child: Row(
                 children: [
-                  const Text(
-                    'Truy cập nhanh',
-                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                  Expanded(
+                    child: _QuickAccessCard(
+                      title: 'Lịch sử thi',
+                      icon: Icons.history,
+                      color: Colors.orange,
+                      onTap: () => context.goNamed(AppRouteNames.studentHistory),
+                    ),
                   ),
-                  const SizedBox(height: 12),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: _QuickAccessCard(
-                          title: 'Lịch sử thi',
-                          subtitle: 'Xem lại kết quả',
-                          icon: Icons.history,
-                          color: Colors.orange,
-                          onTap: () => context.goNamed(AppRouteNames.studentHistory),
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: _QuickAccessCard(
-                          title: 'Xếp hạng',
-                          subtitle: 'Top sinh viên',
-                          icon: Icons.emoji_events,
-                          color: Colors.purple,
-                          onTap: () => context.goNamed(AppRouteNames.studentLeaderboard),
-                        ),
-                      ),
-                    ],
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: _QuickAccessCard(
+                      title: 'Xếp hạng',
+                      icon: Icons.emoji_events,
+                      color: Colors.purple,
+                      onTap: () => context.goNamed(AppRouteNames.studentLeaderboard),
+                    ),
                   ),
                 ],
               ),
             ),
           ),
 
-          SliverPersistentHeader(
-            pinned: true,
-            delegate: _SliverAppBarDelegate(
-              child: Container(
-                color: theme.scaffoldBackgroundColor,
-                padding: const EdgeInsets.symmetric(vertical: 8),
-                child: SingleChildScrollView(
-                  scrollDirection: Axis.horizontal,
-                  padding: const EdgeInsets.symmetric(horizontal: 20),
-                  child: Row(
-                    children: [
-                      _FilterChip(
-                        label: 'Đang diễn ra',
-                        isSelected: currentFilter == ContestStatus.live,
-                        onTap: () => ref.read(contestStatusFilterProvider.notifier).state =
-                            ContestStatus.live,
-                      ),
-                      const SizedBox(width: 8),
-                      _FilterChip(
-                        label: 'Sắp diễn ra',
-                        isSelected: currentFilter == ContestStatus.upcoming,
-                        onTap: () => ref.read(contestStatusFilterProvider.notifier).state =
-                            ContestStatus.upcoming,
-                      ),
-                      const SizedBox(width: 8),
-                      _FilterChip(
-                        label: 'Đã kết thúc',
-                        isSelected: currentFilter == ContestStatus.finished,
-                        onTap: () => ref.read(contestStatusFilterProvider.notifier).state =
-                            ContestStatus.finished,
-                      ),
-                    ],
-                  ),
-                ),
-              ),
+          const SliverToBoxAdapter(
+            child: Padding(
+              padding: EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+              child: Text('Môn học của tôi', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
             ),
           ),
 
-          filteredContestsAsync.when(
-            data: (contests) {
-              if (contests.isEmpty) {
-                return const SliverFillRemaining(
-                  child: Center(
-                    child: Text('Không có cuộc thi nào.'),
-                  ),
-                );
-              }
-              return SliverPadding(
-                padding: const EdgeInsets.fromLTRB(20, 16, 20, 100),
-                sliver: SliverList(
-                  delegate: SliverChildBuilderDelegate(
-                    (context, index) {
-                      final contest = contests[index];
-                      return Padding(
-                        padding: const EdgeInsets.only(bottom: 16),
-                        child: _ContestCard(contest: contest),
-                      );
-                    },
-                    childCount: contests.length,
-                  ),
+          subjectsAsync.when(
+            data: (subjects) => SliverPadding(
+              padding: const EdgeInsets.symmetric(horizontal: 20),
+              sliver: SliverList(
+                delegate: SliverChildBuilderDelegate(
+                  (context, index) {
+                    final subject = subjects[index];
+                    return Card(
+                      margin: const EdgeInsets.only(bottom: 12),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                      child: ListTile(
+                        leading: Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(color: theme.colorScheme.primary.withOpacity(0.1), borderRadius: BorderRadius.circular(10)),
+                          child: Icon(Icons.book, color: theme.colorScheme.primary),
+                        ),
+                        title: Text(subject.name, style: const TextStyle(fontWeight: FontWeight.bold)),
+                        subtitle: Text(subject.description ?? 'Không có mô tả', maxLines: 1, overflow: TextOverflow.ellipsis),
+                        trailing: const Icon(Icons.chevron_right_rounded),
+                        onTap: () {
+                          context.pushNamed(
+                            AppRouteNames.studentQuizCatalog,
+                            pathParameters: {'subjectId': subject.id},
+                            queryParameters: {'name': subject.name},
+                          );
+                        },
+                      ),
+                    );
+                  },
+                  childCount: subjects.length,
                 ),
-              );
-            },
-            loading: () => const SliverFillRemaining(
-              child: Center(child: CircularProgressIndicator()),
+              ),
             ),
-            error: (err, stack) => SliverFillRemaining(
-              child: Center(child: Text('Lỗi: $err')),
-            ),
+            loading: () => const SliverFillRemaining(child: Center(child: CircularProgressIndicator())),
+            error: (err, stack) => SliverFillRemaining(child: Center(child: Text('Lỗi: $err'))),
           ),
         ],
       ),
@@ -267,437 +183,27 @@ class StudentHomeScreen extends ConsumerWidget {
 
 class _QuickAccessCard extends StatelessWidget {
   final String title;
-  final String subtitle;
   final IconData icon;
   final Color color;
   final VoidCallback onTap;
-
-  const _QuickAccessCard({
-    required this.title,
-    required this.subtitle,
-    required this.icon,
-    required this.color,
-    required this.onTap,
-  });
+  const _QuickAccessCard({required this.title, required this.icon, required this.color, required this.onTap});
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    return GestureDetector(
+    return InkWell(
       onTap: onTap,
+      borderRadius: BorderRadius.circular(16),
       child: Container(
         padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: isDark ? Colors.white.withOpacity(0.05) : Colors.white,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(
-            color: isDark ? Colors.white10 : (Colors.grey[200] ?? Colors.grey),
-          ),
-        ),
+        decoration: BoxDecoration(color: color.withOpacity(0.1), borderRadius: BorderRadius.circular(16)),
         child: Row(
           children: [
-            Container(
-              padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                color: color.withOpacity(0.1),
-                shape: BoxShape.circle,
-              ),
-              child: Icon(icon, color: color, size: 20),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    title,
-                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
-                  ),
-                  Text(
-                    subtitle,
-                    style: const TextStyle(color: Colors.grey, fontSize: 11),
-                  ),
-                ],
-              ),
-            ),
+            Icon(icon, color: color, size: 20),
+            const SizedBox(width: 8),
+            Text(title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
           ],
         ),
       ),
     );
-  }
-}
-
-class _FilterChip extends StatelessWidget {
-  final String label;
-  final bool isSelected;
-  final VoidCallback onTap;
-
-  const _FilterChip({
-    required this.label,
-    required this.isSelected,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return GestureDetector(
-      onTap: onTap,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
-        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-        decoration: BoxDecoration(
-          color: isSelected ? theme.colorScheme.primary : Colors.transparent,
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(
-            color: isSelected ? theme.colorScheme.primary : (Colors.grey[300] ?? Colors.grey),
-          ),
-          boxShadow: isSelected
-              ? [
-                  BoxShadow(
-                    color: theme.colorScheme.primary.withOpacity(0.3),
-                    blurRadius: 8,
-                    offset: const Offset(0, 4),
-                  )
-                ]
-              : [],
-        ),
-        child: Text(
-          label,
-          style: TextStyle(
-            color: isSelected ? Colors.white : Colors.grey,
-            fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
-            fontSize: 13,
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _ContestCard extends StatelessWidget {
-  final Contest contest;
-
-  const _ContestCard({required this.contest});
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
-
-    return Container(
-      decoration: BoxDecoration(
-        color: isDark ? Colors.white.withOpacity(0.05) : Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(
-          color: isDark ? Colors.white10 : (Colors.grey[200] ?? Colors.grey),
-        ),
-      ),
-      child: Stack(
-        children: [
-          if (contest.status == ContestStatus.live)
-            Positioned(
-              left: 0,
-              top: 0,
-              bottom: 0,
-              width: 4,
-              child: Container(decoration: const BoxDecoration(color: Colors.red, borderRadius: BorderRadius.only(topLeft: Radius.circular(4), bottomLeft: Radius.circular(4)))),
-            ),
-          Padding(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    _StatusBadge(status: contest.status),
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                      decoration: BoxDecoration(
-                        color: isDark ? Colors.white10 : Colors.grey[100],
-                        borderRadius: BorderRadius.circular(4),
-                      ),
-                      child: Text(
-                        '${contest.durationMinutes} phút',
-                        style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.grey),
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 12),
-                Text(
-                  contest.title,
-                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  'Môn: ${contest.subjectName} • ${contest.description}',
-                  style: const TextStyle(color: Colors.grey, fontSize: 13),
-                ),
-                const SizedBox(height: 16),
-                if (contest.status == ContestStatus.upcoming)
-                  Container(
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: theme.colorScheme.primary.withOpacity(0.05),
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: theme.colorScheme.primary.withOpacity(0.1)),
-                    ),
-                    child: Row(
-                      children: [
-                        Icon(Icons.schedule, size: 16, color: theme.colorScheme.primary),
-                        const SizedBox(width: 8),
-                        Text(
-                          'Bắt đầu lúc: 14:00 - Hôm nay',
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: isDark ? Colors.white70 : Colors.black87,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                if (contest.status == ContestStatus.live)
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      _ParticipantStack(avatars: contest.participantAvatars, total: contest.totalParticipants),
-                      ElevatedButton(
-                        onPressed: () => context.pushNamed(
-                          AppRouteNames.studentQuiz,
-                          pathParameters: {'contestId': contest.id}, // Truyền tham số ID cuộc thi
-                        ),
-                        style: ElevatedButton.styleFrom(
-                          minimumSize: const Size(120, 36),
-                          padding: const EdgeInsets.symmetric(horizontal: 16),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                        ),
-                        child: const Text('Tham gia ngay', style: TextStyle(fontSize: 13)),
-                      ),
-                    ],
-                  ),
-                if (contest.status == ContestStatus.upcoming)
-                  Padding(
-                    padding: const EdgeInsets.only(top: 12),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Expanded(
-                          child: OutlinedButton(
-                            onPressed: () {},
-                            style: OutlinedButton.styleFrom(
-                              minimumSize: const Size(0, 40),
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                            ),
-                            child: const Text('Chi tiết', style: TextStyle(fontSize: 13)),
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: ElevatedButton(
-                            onPressed: () {},
-                            style: ElevatedButton.styleFrom(
-                              minimumSize: const Size(0, 40),
-                              backgroundColor: theme.colorScheme.primary.withOpacity(0.1),
-                              foregroundColor: theme.colorScheme.primary,
-                              elevation: 0,
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                            ),
-                            child: const Text('Đăng ký', style: TextStyle(fontSize: 13)),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _StatusBadge extends StatelessWidget {
-  final ContestStatus status;
-
-  const _StatusBadge({required this.status});
-
-  @override
-  Widget build(BuildContext context) {
-    switch (status) {
-      case ContestStatus.live:
-        return Container(
-          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-          decoration: BoxDecoration(
-            color: Colors.red.withOpacity(0.1),
-            borderRadius: BorderRadius.circular(6),
-          ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Container(
-                width: 6,
-                height: 6,
-                decoration: const BoxDecoration(color: Colors.red, shape: BoxShape.circle),
-              ),
-              const SizedBox(width: 6),
-              const Text(
-                'TRỰC TIẾP',
-                style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold, fontSize: 10),
-              ),
-            ],
-          ),
-        );
-      case ContestStatus.upcoming:
-        return Container(
-          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-          decoration: BoxDecoration(
-            color: Colors.blue.withOpacity(0.1),
-            borderRadius: BorderRadius.circular(6),
-          ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Icon(Icons.event, size: 12, color: Colors.blue),
-              const SizedBox(width: 4),
-              const Text(
-                'SẮP DIỄN RA',
-                style: TextStyle(color: Colors.blue, fontWeight: FontWeight.bold, fontSize: 10),
-              ),
-            ],
-          ),
-        );
-      case ContestStatus.finished:
-        return Container(
-          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-          decoration: BoxDecoration(
-            color: Colors.grey.withOpacity(0.1),
-            borderRadius: BorderRadius.circular(6),
-          ),
-          child: const Text(
-            'ĐÃ KẾT THÚC',
-            style: TextStyle(color: Colors.grey, fontWeight: FontWeight.bold, fontSize: 10),
-          ),
-        );
-    }
-  }
-}
-
-class _ParticipantStack extends StatelessWidget {
-  final List<String> avatars;
-  final int total;
-
-  const _ParticipantStack({required this.avatars, required this.total});
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
-    final visibleAvatars = avatars.length > 3 ? avatars.sublist(0, 3) : avatars;
-    
-    return Row(
-      children: [
-        SizedBox(
-          width: (visibleAvatars.isEmpty ? 0 : 28 + ((visibleAvatars.length - 1) * 18)),
-          height: 28,
-          child: ListView.builder(
-            scrollDirection: Axis.horizontal,
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            itemCount: visibleAvatars.length,
-            itemBuilder: (context, index) {
-              return Transform.translate(
-                offset: Offset(index * -10.0, 0),
-                child: Container(
-                  width: 28,
-                  height: 28,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    border: Border.all(color: theme.scaffoldBackgroundColor, width: 2),
-                  ),
-                  clipBehavior: Clip.antiAlias,
-                  child: Image.network(
-                    visibleAvatars[index],
-                    fit: BoxFit.cover,
-                    errorBuilder: (context, error, stackTrace) => _CircleAvatarFallback(
-                      size: 28,
-                      borderColor: theme.scaffoldBackgroundColor,
-                    ),
-                  ),
-                ),
-              );
-            },
-          ),
-        ),
-        Transform.translate(
-          offset: Offset((visibleAvatars.isNotEmpty ? visibleAvatars.length - 1 : 0) * -10.0 + 4.0, 0),
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
-            decoration: BoxDecoration(
-              color: isDark ? Colors.white10 : Colors.grey[100],
-              borderRadius: BorderRadius.circular(10),
-            ),
-            child: Text(
-              '+$total',
-              style: const TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: Colors.grey),
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-class _CircleAvatarFallback extends StatelessWidget {
-  final double size;
-  final Color borderColor;
-
-  const _CircleAvatarFallback({
-    required this.size,
-    required this.borderColor,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return Container(
-      width: size,
-      height: size,
-      decoration: BoxDecoration(
-        color: theme.colorScheme.primary.withOpacity(0.08),
-        shape: BoxShape.circle,
-        border: Border.all(color: borderColor, width: 2),
-      ),
-      alignment: Alignment.center,
-      child: Icon(
-        Icons.person,
-        size: size * 0.45,
-        color: theme.colorScheme.primary.withOpacity(0.7),
-      ),
-    );
-  }
-}
-
-class _SliverAppBarDelegate extends SliverPersistentHeaderDelegate {
-  final Widget child;
-
-  _SliverAppBarDelegate({required this.child});
-
-  @override
-  double get minExtent => 72.0;
-  @override
-  double get maxExtent => 72.0;
-
-  @override
-  Widget build(BuildContext context, double shrinkOffset, bool overlapsContent) {
-    // Force the header to paint exactly within the sliver extent.
-    return SizedBox.expand(child: child);
-  }
-
-  @override
-  bool shouldRebuild(_SliverAppBarDelegate oldDelegate) {
-    return false;
   }
 }

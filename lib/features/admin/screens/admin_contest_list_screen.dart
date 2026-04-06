@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/router/app_router.dart';
+import '../../teacher/subjects/models/subject.dart';
+import '../../teacher/subjects/screens/quiz_management_screen.dart';
 import '../repositories/admin_repository.dart';
 
 class AdminContestListScreen extends ConsumerStatefulWidget {
@@ -34,7 +36,7 @@ class _AdminContestListScreenState extends ConsumerState<AdminContestListScreen>
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: Text(contest == null ? 'Tạo kỳ thi mới' : 'Cập nhật kỳ thi'),
+        title: Text(contest == null ? 'Tạo kỳ thi gốc (Contest)' : 'Cập nhật kỳ thi'),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -72,24 +74,45 @@ class _AdminContestListScreenState extends ConsumerState<AdminContestListScreen>
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Text('Kỳ thi: ${widget.subjectName}'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.auto_awesome),
-            tooltip: 'AI Builder',
-            onPressed: () => context.push('/admin/subjects/${widget.subjectId}/ai-builder'),
+    return DefaultTabController(
+      length: 2,
+      child: Scaffold(
+        appBar: AppBar(
+          title: Text('Quản lý: ${widget.subjectName}'),
+          actions: [
+            IconButton(
+              icon: const Icon(Icons.auto_awesome),
+              tooltip: 'AI Builder',
+              onPressed: () => context.push('/admin/subjects/${widget.subjectId}/ai-builder'),
+            ),
+          ],
+          bottom: const TabBar(
+            tabs: [
+              Tab(icon: Icon(Icons.inventory_2_outlined), text: 'Bộ đề gốc'),
+              Tab(icon: Icon(Icons.rocket_launch_outlined), text: 'Quiz Public'),
+            ],
           ),
-        ],
+        ),
+        body: TabBarView(
+          children: [
+            _buildContestTab(),
+            // Dùng chung màn hình quản lý Quiz với Teacher nhưng Role Admin sẽ tự tạo Public Quiz
+            QuizManagementScreen(subject: Subject(id: widget.subjectId, name: widget.subjectName)),
+          ],
+        ),
       ),
-      body: FutureBuilder<List<dynamic>>(
-        future: ref.watch(adminRepositoryProvider).getContestsBySubject(widget.subjectId),
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) return const Center(child: CircularProgressIndicator());
-          final contests = snapshot.data ?? [];
-          if (contests.isEmpty) return const Center(child: Text('Chưa có kỳ thi nào'));
-          return ListView.builder(
+    );
+  }
+
+  Widget _buildContestTab() {
+    return FutureBuilder<List<dynamic>>(
+      future: ref.watch(adminRepositoryProvider).getContestsBySubject(widget.subjectId),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) return const Center(child: CircularProgressIndicator());
+        final contests = snapshot.data ?? [];
+        if (contests.isEmpty) return const Center(child: Text('Chưa có bộ đề nào'));
+        return Scaffold(
+          body: ListView.builder(
             itemCount: contests.length,
             itemBuilder: (context, index) {
               final c = contests[index];
@@ -119,13 +142,14 @@ class _AdminContestListScreenState extends ConsumerState<AdminContestListScreen>
                 },
               );
             },
-          );
-        },
-      ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () => _showContestDialog(),
-        child: const Icon(Icons.add),
-      ),
+          ),
+          floatingActionButton: FloatingActionButton.extended(
+            onPressed: () => _showContestDialog(),
+            label: const Text('Tạo bộ đề gốc'),
+            icon: const Icon(Icons.add),
+          ),
+        );
+      },
     );
   }
 }

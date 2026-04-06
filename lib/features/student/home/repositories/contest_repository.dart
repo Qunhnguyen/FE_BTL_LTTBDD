@@ -49,7 +49,7 @@ class ContestRepository {
     );
   }
 
-  // Teacher Analytics
+  // --- Teacher Analytics (Contest) ---
   Future<ContestAnalytics> getContestAnalytics(String contestId) async {
     final response = await _apiClient.get('/api/teacher/analytics/contests/$contestId');
     return ContestAnalytics.fromJson(response.data);
@@ -72,8 +72,35 @@ class ContestRepository {
     );
   }
 
-  Future<StudentSubmissionDetail> getStudentSubmissionDetail(String contestId, String studentId) async {
-    final response = await _apiClient.get('/api/teacher/analytics/contests/$contestId/submissions/$studentId');
+  // --- Teacher Analytics (Quiz) - NEW ENDPOINTS ---
+  Future<ContestAnalytics> getQuizAnalytics(String quizId) async {
+    final response = await _apiClient.get('/api/teacher/analytics/quizzes/$quizId');
+    return ContestAnalytics.fromJson(response.data);
+  }
+
+  Future<Scoreboard> getQuizScoreboard(String quizId) async {
+    final response = await _apiClient.get('/api/teacher/analytics/quizzes/$quizId/scoreboard');
+    return Scoreboard.fromJson(response.data);
+  }
+
+  Future<Response> exportQuizScoreboard(String quizId) async {
+    return await _apiClient.get(
+      '/api/teacher/analytics/quizzes/$quizId/scoreboard/export',
+      options: Options(responseType: ResponseType.bytes),
+    );
+  }
+
+  Future<StudentSubmissionDetail> getQuizStudentSubmissionDetail(String quizId, String studentId) async {
+    final response = await _apiClient.get('/api/teacher/analytics/quizzes/$quizId/submissions/$studentId');
+    return StudentSubmissionDetail.fromJson(response.data);
+  }
+
+  // Shared detail method
+  Future<StudentSubmissionDetail> getStudentSubmissionDetail(String id, String studentId, {bool isQuiz = false}) async {
+    final path = isQuiz 
+      ? '/api/teacher/analytics/quizzes/$id/submissions/$studentId'
+      : '/api/teacher/analytics/contests/$id/submissions/$studentId';
+    final response = await _apiClient.get(path);
     return StudentSubmissionDetail.fromJson(response.data);
   }
 }

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'csv_import_screen.dart';
 import '../models/managed_question.dart';
 import '../providers/question_management_provider.dart';
 import '../repositories/question_repository.dart';
@@ -8,7 +9,16 @@ import '../../../../features/student/home/providers/contest_provider.dart';
 import '../../../../core/router/app_router.dart';
 
 class QuestionManagementScreen extends ConsumerStatefulWidget {
-  const QuestionManagementScreen({super.key});
+  final String? subjectId;
+  final String? csvImportRouteName;
+  final String subjectsRouteName;
+
+  const QuestionManagementScreen({
+    super.key,
+    this.subjectId,
+    this.csvImportRouteName,
+    this.subjectsRouteName = AppRouteNames.teacherSubjects,
+  });
 
   @override
   ConsumerState<QuestionManagementScreen> createState() => _QuestionManagementScreenState();
@@ -36,7 +46,7 @@ class _QuestionManagementScreenState extends ConsumerState<QuestionManagementScr
         ),
         actions: [
           IconButton(
-            onPressed: () => context.pushNamed(AppRouteNames.teacherCsvImport),
+            onPressed: () => _openCsvImport(context),
             icon: const Icon(Icons.upload_file),
             tooltip: 'Import CSV',
           ),
@@ -145,7 +155,7 @@ class _QuestionManagementScreenState extends ConsumerState<QuestionManagementScr
                                   ),
                                   const SizedBox(width: 12),
                                   OutlinedButton.icon(
-                                    onPressed: () => context.pushNamed(AppRouteNames.teacherCsvImport),
+                                    onPressed: () => _openCsvImport(context),
                                     icon: const Icon(Icons.upload_file),
                                     label: const Text('Import CSV'),
                                   ),
@@ -214,7 +224,7 @@ class _QuestionManagementScreenState extends ConsumerState<QuestionManagementScr
                       ),
                       const SizedBox(height: 20),
                       OutlinedButton.icon(
-                        onPressed: () => context.goNamed(AppRouteNames.teacherSubjects),
+                        onPressed: () => context.goNamed(widget.subjectsRouteName),
                         icon: const Icon(Icons.arrow_forward),
                         label: const Text('Đi tới Quản lý Môn học'),
                         style: OutlinedButton.styleFrom(
@@ -244,6 +254,24 @@ class _QuestionManagementScreenState extends ConsumerState<QuestionManagementScr
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (err, stack) => Center(child: Text('Lỗi: $err')),
       ),
+    );
+  }
+
+  void _openCsvImport(BuildContext context) {
+    final subjectId = widget.subjectId;
+    final routeName = widget.csvImportRouteName;
+    if (subjectId == null || routeName == null) {
+      Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (_) => const CsvImportScreen(),
+        ),
+      );
+      return;
+    }
+
+    context.pushNamed(
+      routeName,
+      pathParameters: {'subjectId': subjectId},
     );
   }
 

@@ -7,6 +7,7 @@ import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
 
 import '../../../../core/error/app_failure.dart';
+import '../../../../core/network/push_notification_service.dart';
 import '../../../../core/router/app_router.dart';
 import '../../../auth/models/user.dart';
 import '../../../auth/providers/auth_provider.dart';
@@ -38,6 +39,7 @@ class _StudentProfileScreenState extends ConsumerState<StudentProfileScreen> {
 
   bool _isSavingProfile = false;
   bool _isUploadingAvatar = false;
+  bool _isResolvingFcmToken = false;
   String? _syncedUserId;
   String? _syncedUserName;
 
