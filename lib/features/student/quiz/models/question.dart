@@ -1,57 +1,47 @@
-class Answer {
-  final String id;
-  final String text;
-  final String label; // A, B, C, D
+class QuizOption {
+  final String key;
+  final String content;
 
-  Answer({
-    required this.id,
-    required this.text,
-    required this.label,
-  });
+  QuizOption({required this.key, required this.content});
+
+  factory QuizOption.fromJson(Map<String, dynamic> json) {
+    return QuizOption(
+      key: json['key'] ?? '',
+      content: json['content'] ?? '',
+    );
+  }
 }
 
 class Question {
   final String id;
+  final int questionNo;
   final String content;
-  final String optionA;
-  final String optionB;
-  final String optionC;
-  final String optionD;
-  final String? correctOption; // Chỉ Admin mới thấy
-  final int points;
   final String? level;
+  final String? topic;
+  final double score;
+  final List<QuizOption> options;
 
   Question({
     required this.id,
+    required this.questionNo,
     required this.content,
-    required this.optionA,
-    required this.optionB,
-    required this.optionC,
-    required this.optionD,
-    this.correctOption,
-    this.points = 10,
     this.level,
+    this.topic,
+    required this.score,
+    required this.options,
   });
-
-  // Chuyển đổi từ phẳng (optionA..D) sang danh sách Answer để dễ hiển thị UI
-  List<Answer> get answers => [
-    Answer(id: 'A', text: optionA, label: 'A'),
-    Answer(id: 'B', text: optionB, label: 'B'),
-    Answer(id: 'C', text: optionC, label: 'C'),
-    Answer(id: 'D', text: optionD, label: 'D'),
-  ];
 
   factory Question.fromJson(Map<String, dynamic> json) {
     return Question(
-      id: (json['id'] ?? json['_id'] ?? '').toString(),
+      id: json['id']?.toString() ?? '',
+      questionNo: json['questionNo'] ?? 0,
       content: json['content'] ?? '',
-      optionA: json['optionA'] ?? '',
-      optionB: json['optionB'] ?? '',
-      optionC: json['optionC'] ?? '',
-      optionD: json['optionD'] ?? '',
-      correctOption: json['correctOption'],
-      points: json['score'] ?? json['points'] ?? 10,
       level: json['level'],
+      topic: json['topic'],
+      score: (json['score'] ?? 0).toDouble(),
+      options: (json['options'] as List? ?? [])
+          .map((opt) => QuizOption.fromJson(opt))
+          .toList(),
     );
   }
 }

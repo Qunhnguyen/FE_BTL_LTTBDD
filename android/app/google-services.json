@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "329888205788",
+    "project_id": "btladroid-7e20d",
+    "storage_bucket": "btladroid-7e20d.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:329888205788:android:6a19530a4832737ce89d19",
+        "android_client_info": {
+          "package_name": "com.example.quiz_app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDzAckiDQJDN_NdMm9fJSt10hcM9GNfYdk"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

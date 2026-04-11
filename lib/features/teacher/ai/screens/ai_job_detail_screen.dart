@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 import '../models/ai_models.dart';
 import '../repositories/ai_repository.dart';
 import '../../subjects/repositories/classroom_repository.dart';
+import '../../subjects/screens/teacher_contest_list_screen.dart'; // Import để invalidate provider
 
 class AiJobDetailScreen extends ConsumerStatefulWidget {
   final String subjectId;
@@ -138,9 +139,15 @@ class _AiJobDetailScreenState extends ConsumerState<AiJobDetailScreen> {
       setState(() => _isLoading = true);
       try {
         await ref.read(aiRepositoryProvider).approveAiJob(widget.subjectId, widget.jobId, result);
+        
+        // QUAN TRỌNG: Làm mới danh sách cuộc thi sau khi phê duyệt thành công
+        ref.invalidate(contestsBySubjectProvider(widget.subjectId));
+        
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Đã phê duyệt đề thi thành công!')));
-          _fetchJob(); // Refresh to see ALREADY_APPROVED or updated status
+          _fetchJob();
+          // Tự động quay lại màn hình danh sách sau khi approve
+          Navigator.pop(context); 
         }
       } catch (e) {
         if (mounted) {

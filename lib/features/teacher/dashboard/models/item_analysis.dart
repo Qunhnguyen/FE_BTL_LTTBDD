@@ -34,6 +34,7 @@ class QuestionAnalysis {
   final String questionId;
   final int questionNo;
   final String content;
+  final String? difficulty; // THÊM TRƯỜNG NÀY
   final int attempts;
   final int correctCount;
   final int wrongCount;
@@ -44,6 +45,7 @@ class QuestionAnalysis {
     required this.questionId,
     required this.questionNo,
     required this.content,
+    this.difficulty,
     required this.attempts,
     required this.correctCount,
     required this.wrongCount,
@@ -56,6 +58,7 @@ class QuestionAnalysis {
       questionId: json['questionId'] ?? '',
       questionNo: json['questionNo'] ?? 0,
       content: json['content'] ?? '',
+      difficulty: json['difficulty'],
       attempts: json['attempts'] ?? 0,
       correctCount: json['correctCount'] ?? 0,
       wrongCount: json['wrongCount'] ?? 0,
@@ -69,6 +72,7 @@ class OptionAnalysis {
   final String questionId;
   final int questionNo;
   final String content;
+  final String? difficulty; // THÊM TRƯỜNG NÀY
   final int attempts;
   final Map<String, int> optionCounts;
 
@@ -76,6 +80,7 @@ class OptionAnalysis {
     required this.questionId,
     required this.questionNo,
     required this.content,
+    this.difficulty,
     required this.attempts,
     required this.optionCounts,
   });
@@ -85,6 +90,7 @@ class OptionAnalysis {
       questionId: json['questionId'] ?? '',
       questionNo: json['questionNo'] ?? 0,
       content: json['content'] ?? '',
+      difficulty: json['difficulty'],
       attempts: json['attempts'] ?? 0,
       optionCounts: Map<String, int>.from(json['optionCounts'] ?? {}),
     );

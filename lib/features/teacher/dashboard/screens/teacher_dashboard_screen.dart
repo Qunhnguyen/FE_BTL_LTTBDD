@@ -15,195 +15,84 @@ class TeacherDashboardScreen extends ConsumerWidget {
     final recentExams = ref.watch(recentExamsProvider);
 
     return Scaffold(
+      backgroundColor: theme.scaffoldBackgroundColor,
       body: SafeArea(
         child: SingleChildScrollView(
+          physics: const BouncingScrollPhysics(),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Header
+              // Header xịn hơn
               Padding(
-                padding: const EdgeInsets.all(20.0),
+                padding: const EdgeInsets.all(24.0),
                 child: Row(
                   children: [
-                    Container(
-                      height: 44,
-                      width: 44,
-                      decoration: BoxDecoration(
-                        color: theme.colorScheme.primary.withValues(alpha: 0.2),
-                        shape: BoxShape.circle,
-                      ),
-                      child: Icon(Icons.dashboard_outlined,
-                          color: theme.colorScheme.primary),
+                    CircleAvatar(
+                      radius: 22,
+                      backgroundColor: theme.colorScheme.primary.withOpacity(0.1),
+                      child: Icon(Icons.dashboard_rounded, color: theme.colorScheme.primary),
                     ),
-                    const SizedBox(width: 12),
+                    const SizedBox(width: 16),
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(
-                            'Dashboard',
-                            style: theme.textTheme.titleLarge
-                                ?.copyWith(fontWeight: FontWeight.bold),
-                          ),
-                          Text(
-                            'Xin chào, Giảng viên',
-                            style: theme.textTheme.bodySmall
-                                ?.copyWith(color: Colors.grey),
-                          ),
+                          Text('Bảng điều khiển', style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold)),
+                          Text('Xin chào, Giảng viên!', style: theme.textTheme.bodySmall?.copyWith(color: Colors.grey)),
                         ],
                       ),
                     ),
-                    IconButton(
-                      onPressed: () {},
-                      icon: const Icon(Icons.notifications_none),
-                    ),
+                    IconButton(onPressed: () {}, icon: const Icon(Icons.notifications_none_rounded)),
                   ],
                 ),
               ),
 
-              // Quick Stats
+              // Thống kê nhanh
               Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 20.0),
+                padding: const EdgeInsets.symmetric(horizontal: 24),
                 child: Column(
                   children: [
-                    // Total Questions Card
-                    Container(
-                      padding: const EdgeInsets.all(20),
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          colors: [
-                            theme.colorScheme.primary.withValues(alpha: 0.2),
-                            isDark
-                                ? Colors.white.withValues(alpha: 0.05)
-                                : Colors.white,
-                          ],
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                        ),
-                        borderRadius: BorderRadius.circular(20),
-                        border: Border.all(
-                            color: theme.colorScheme.primary.withValues(alpha: 0.1)),
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  const Text('Tổng số câu hỏi',
-                                      style: TextStyle(
-                                          color: Colors.grey,
-                                          fontWeight: FontWeight.w500)),
-                                  const SizedBox(height: 4),
-                                  Text('1,200',
-                                      style: theme.textTheme.headlineMedium
-                                          ?.copyWith(
-                                              fontWeight: FontWeight.bold)),
-                                ],
-                              ),
-                              Container(
-                                padding: const EdgeInsets.all(10),
-                                decoration: BoxDecoration(
-                                  color:
-                                      theme.colorScheme.primary.withValues(alpha: 0.1),
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
-                                child: Icon(Icons.quiz_outlined,
-                                    color: theme.colorScheme.primary),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 16),
-                          Row(
-                            children: [
-                              Container(
-                                padding: const EdgeInsets.symmetric(
-                                    horizontal: 8, vertical: 4),
-                                decoration: BoxDecoration(
-                                  color: Colors.green.withValues(alpha: 0.1),
-                                  borderRadius: BorderRadius.circular(8),
-                                ),
-                                child: Row(
-                                  children: const [
-                                    Icon(Icons.trending_up,
-                                        size: 14, color: Colors.green),
-                                    SizedBox(width: 4),
-                                    Text('+15%',
-                                        style: TextStyle(
-                                            color: Colors.green,
-                                            fontSize: 12,
-                                            fontWeight: FontWeight.bold)),
-                                  ],
-                                ),
-                              ),
-                              const SizedBox(width: 8),
-                              const Text('so với tháng trước',
-                                  style: TextStyle(
-                                      color: Colors.grey, fontSize: 12)),
-                            ],
-                          ),
-                        ],
-                      ),
-                    ),
+                    _buildTotalCard(theme, isDark),
                     const SizedBox(height: 16),
-                    // Small Stats Row
                     Row(
                       children: [
-                        Expanded(
-                          child: _SmallStatCard(
-                            icon: Icons.library_books_outlined,
-                            label: 'Môn học',
-                            value: '12',
-                            color: Colors.blue,
-                          ),
-                        ),
+                        Expanded(child: _SmallStatCard(icon: Icons.book_rounded, label: 'Môn học', value: '12', color: Colors.blue)),
                         const SizedBox(width: 16),
-                        Expanded(
-                          child: _SmallStatCard(
-                            icon: Icons.assignment_outlined,
-                            label: 'Bài thi',
-                            value: '45',
-                            color: Colors.purple,
-                          ),
-                        ),
+                        Expanded(child: _SmallStatCard(icon: Icons.assignment_rounded, label: 'Bài thi', value: '45', color: Colors.purple)),
                       ],
                     ),
                   ],
                 ),
               ),
 
-              // Thao tác nhanh
+              // Thao tác nhanh (Fix lỗi infinite width bằng cách dùng Container có height)
               const Padding(
-                padding: EdgeInsets.fromLTRB(20, 32, 20, 16),
-                child: Text('Thao tác nhanh',
-                    style:
-                        TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
+                padding: EdgeInsets.fromLTRB(24, 32, 24, 16),
+                child: Text('Thao tác nhanh', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
               ),
-              SingleChildScrollView(
-                scrollDirection: Alignment.centerLeft != null ? Axis.horizontal : Axis.horizontal, // Fix for some older flutter versions if needed, but standard is fine
-                padding: const EdgeInsets.symmetric(horizontal: 20),
-                child: Row(
+              SizedBox(
+                height: 50,
+                child: ListView(
+                  scrollDirection: Axis.horizontal,
+                  padding: const EdgeInsets.symmetric(horizontal: 24),
                   children: [
                     _ActionButton(
-                      icon: Icons.add_circle_outline,
-                      label: 'Tạo bài thi',
-                      isPrimary: true,
-                      onTap: () => context.go('/teacher/subjects'),
+                      icon: Icons.add_task_rounded, 
+                      label: 'Tạo Quiz', 
+                      isPrimary: true, 
+                      onTap: () => context.goNamed(AppRouteNames.teacherSubjects)
                     ),
                     const SizedBox(width: 12),
                     _ActionButton(
-                      icon: Icons.library_add_outlined,
-                      label: 'Tạo môn học',
-                      onTap: () => context.go('/teacher/subjects'),
+                      icon: Icons.library_add_rounded, 
+                      label: 'Môn học', 
+                      onTap: () => context.goNamed(AppRouteNames.teacherSubjects)
                     ),
                     const SizedBox(width: 12),
                     _ActionButton(
-                      icon: Icons.group_add_outlined,
-                      label: 'Thêm SV',
-                      onTap: () {},
+                      icon: Icons.person_add_rounded, 
+                      label: 'Thêm SV', 
+                      onTap: () {}
                     ),
                   ],
                 ),
@@ -211,34 +100,62 @@ class TeacherDashboardScreen extends ConsumerWidget {
 
               // Bài thi gần đây
               Padding(
-                padding: const EdgeInsets.fromLTRB(20, 32, 20, 16),
+                padding: const EdgeInsets.fromLTRB(24, 32, 24, 16),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    const Text('Bài thi gần đây',
-                        style: TextStyle(
-                            fontWeight: FontWeight.bold, fontSize: 18)),
-                    TextButton(
-                        onPressed: () {}, child: const Text('Xem tất cả')),
+                    const Text('Bài thi gần đây', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
+                    TextButton(onPressed: () {}, child: const Text('Xem tất cả')),
                   ],
                 ),
               ),
-              ListView.builder(
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                padding: const EdgeInsets.symmetric(horizontal: 20),
-                itemCount: recentExams.length,
-                itemBuilder: (context, index) {
-                  return Padding(
+              
+              if (recentExams.isEmpty)
+                const Center(child: Padding(padding: EdgeInsets.all(40), child: Text('Chưa có dữ liệu bài thi.')))
+              else
+                ListView.builder(
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  padding: const EdgeInsets.symmetric(horizontal: 24),
+                  itemCount: recentExams.length,
+                  itemBuilder: (context, index) => Padding(
                     padding: const EdgeInsets.only(bottom: 12),
                     child: _ExamListItem(exam: recentExams[index]),
-                  );
-                },
-              ),
+                  ),
+                ),
               const SizedBox(height: 100),
             ],
           ),
         ),
+      ),
+    );
+  }
+
+  Widget _buildTotalCard(ThemeData theme, bool isDark) {
+    return Container(
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        color: theme.cardColor,
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: theme.dividerColor.withOpacity(0.05)),
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text('Tổng số câu hỏi', style: TextStyle(color: Colors.grey, fontWeight: FontWeight.w500)),
+              const SizedBox(height: 4),
+              Text('1,248', style: theme.textTheme.headlineMedium?.copyWith(fontWeight: FontWeight.w900)),
+            ],
+          ),
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(color: theme.colorScheme.primary.withOpacity(0.1), borderRadius: BorderRadius.circular(16)),
+            child: Icon(Icons.auto_awesome_motion_rounded, color: theme.colorScheme.primary, size: 32),
+          ),
+        ],
       ),
     );
   }
@@ -249,45 +166,21 @@ class _SmallStatCard extends StatelessWidget {
   final String label;
   final String value;
   final Color color;
-
-  const _SmallStatCard({
-    required this.icon,
-    required this.label,
-    required this.value,
-    required this.color,
-  });
+  const _SmallStatCard({required this.icon, required this.label, required this.value, required this.color});
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final theme = Theme.of(context);
     return Container(
       padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: isDark ? Colors.white.withValues(alpha: 0.05) : Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: isDark ? Colors.white10 : Colors.grey[200]!),
-      ),
+      decoration: BoxDecoration(color: theme.cardColor, borderRadius: BorderRadius.circular(20)),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Container(
-            padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(
-              color: color.withValues(alpha: 0.1),
-              borderRadius: BorderRadius.circular(10),
-            ),
-            child: Icon(icon, color: color, size: 20),
-          ),
+          Icon(icon, color: color, size: 24),
           const SizedBox(height: 12),
-          Text(label,
-              style: const TextStyle(
-                  color: Colors.grey,
-                  fontSize: 12,
-                  fontWeight: FontWeight.w500)),
-          const SizedBox(height: 4),
-          Text(value,
-              style:
-                  const TextStyle(fontWeight: FontWeight.bold, fontSize: 24)),
+          Text(label, style: const TextStyle(color: Colors.grey, fontSize: 12)),
+          Text(value, style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 24)),
         ],
       ),
     );
@@ -299,45 +192,27 @@ class _ActionButton extends StatelessWidget {
   final String label;
   final bool isPrimary;
   final VoidCallback onTap;
-
-  const _ActionButton({
-    required this.icon,
-    required this.label,
-    this.isPrimary = false,
-    required this.onTap,
-  });
+  const _ActionButton({required this.icon, required this.label, this.isPrimary = false, required this.onTap});
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
-
-    return ElevatedButton(
-      onPressed: onTap,
-      style: ElevatedButton.styleFrom(
-        backgroundColor: isPrimary
-            ? theme.colorScheme.primary
-            : (isDark ? Colors.white.withValues(alpha: 0.05) : Colors.white),
-        foregroundColor: isPrimary
-            ? Colors.black
-            : (isDark ? Colors.white70 : Colors.black87),
-        elevation: isPrimary ? 4 : 0,
-        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16),
-          side: isPrimary
-              ? BorderSide.none
-              : BorderSide(color: isDark ? Colors.white10 : Colors.grey[200]!),
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(12),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16),
+        decoration: BoxDecoration(
+          color: isPrimary ? theme.colorScheme.primary : theme.cardColor,
+          borderRadius: BorderRadius.circular(12),
         ),
-      ),
-      child: Row(
-        children: [
-          Icon(icon, size: 20),
-          const SizedBox(width: 8),
-          Text(label,
-              style:
-                  const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
-        ],
+        child: Row(
+          children: [
+            Icon(icon, size: 18, color: isPrimary ? Colors.black : theme.colorScheme.primary),
+            const SizedBox(width: 8),
+            Text(label, style: TextStyle(fontWeight: FontWeight.bold, color: isPrimary ? Colors.black : null)),
+          ],
+        ),
       ),
     );
   }
@@ -345,116 +220,32 @@ class _ActionButton extends StatelessWidget {
 
 class _ExamListItem extends StatelessWidget {
   final RecentExam exam;
-
   const _ExamListItem({required this.exam});
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-
-    Color categoryColor;
-    switch (exam.category) {
-      case 'JAVA':
-        categoryColor = Colors.orange;
-        break;
-      case 'WEB':
-        categoryColor = Colors.blue;
-        break;
-      case 'CSDL':
-        categoryColor = Colors.purple;
-        break;
-      default:
-        categoryColor = Colors.grey;
-    }
-
+    final theme = Theme.of(context);
     return Container(
       padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: isDark ? Colors.white.withValues(alpha: 0.05) : Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: isDark ? Colors.white10 : Colors.grey[200]!),
-      ),
+      decoration: BoxDecoration(color: theme.cardColor, borderRadius: BorderRadius.circular(20)),
       child: Row(
         children: [
           Container(
-            height: 48,
-            width: 48,
+            height: 44, width: 44,
+            decoration: BoxDecoration(color: theme.scaffoldBackgroundColor, borderRadius: BorderRadius.circular(12)),
             alignment: Alignment.center,
-            decoration: BoxDecoration(
-              color: categoryColor.withValues(alpha: 0.1),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Text(
-              exam.category,
-              style: TextStyle(
-                  color: categoryColor,
-                  fontWeight: FontWeight.bold,
-                  fontSize: 10),
-            ),
+            child: Text(exam.category, style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold)),
           ),
           const SizedBox(width: 16),
           Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(exam.title,
-                    style: const TextStyle(
-                        fontWeight: FontWeight.bold, fontSize: 15)),
-                const SizedBox(height: 4),
-                Row(
-                  children: [
-                    Text('${exam.durationMinutes} phút • ${exam.questionCount} câu hỏi',
-                        style:
-                            const TextStyle(color: Colors.grey, fontSize: 12)),
-                    const SizedBox(width: 6),
-                    const Icon(Icons.circle, size: 4, color: Colors.grey),
-                    const SizedBox(width: 6),
-                    _StatusText(status: exam.status),
-                  ],
-                ),
-              ],
-            ),
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Text(exam.title, style: const TextStyle(fontWeight: FontWeight.bold)),
+              Text('${exam.durationMinutes} phút • ${exam.questionCount} câu', style: const TextStyle(color: Colors.grey, fontSize: 12)),
+            ]),
           ),
-          IconButton(
-            onPressed: () {
-              if (exam.status == ExamStatus.finished) {
-                context.pushNamed(
-                  AppRouteNames.teacherContestAnalytics,
-                  pathParameters: {'contestId': exam.id},
-                );
-              }
-            },
-            icon: Icon(
-              exam.status == ExamStatus.finished
-                  ? Icons.analytics_outlined
-                  : Icons.edit_outlined,
-              color: exam.status == ExamStatus.finished ? Colors.blue : Colors.grey,
-              size: 20,
-            ),
-          ),
+          Icon(Icons.chevron_right_rounded, color: Colors.grey.shade700),
         ],
       ),
     );
-  }
-}
-
-class _StatusText extends StatelessWidget {
-  final ExamStatus status;
-  const _StatusText({required this.status});
-
-  @override
-  Widget build(BuildContext context) {
-    switch (status) {
-      case ExamStatus.ongoing:
-        return const Text('Đang diễn ra',
-            style: TextStyle(
-                color: Colors.green, fontSize: 12, fontWeight: FontWeight.w600));
-      case ExamStatus.upcoming:
-        return const Text('Chưa bắt đầu',
-            style: TextStyle(color: Colors.grey, fontSize: 12));
-      case ExamStatus.finished:
-        return const Text('Đã kết thúc',
-            style: TextStyle(color: Colors.grey, fontSize: 12));
-    }
   }
 }

@@ -1,241 +1,189 @@
 import 'dart:async';
-
-import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-
-import '../../../../core/error/app_failure.dart';
 import '../models/question.dart';
+import '../models/quiz_submission.dart';
 import '../models/quiz_result.dart';
 import '../repositories/quiz_repository.dart';
 import 'quiz_result_provider.dart';
 
-class QuizState {
-  static const _unset = Object();
+typedef QuizState = QuizRuntimeState;
 
-  QuizState({
-    this.questions = const [],
-    this.currentQuestionIndex = 0,
-    this.selectedAnswers = const {},
-    this.remainingSeconds = 0,
-    this.initialDurationSeconds = 0,
-    this.isLoading = false,
-    this.isSubmitting = false,
-    this.errorMessage,
-    this.submissionId,
-  });
+// CUNG CẤP LẠI PROVIDER DANH SÁCH QUIZ ĐỂ HẾT LỖI COMPILE
+final studentQuizListProvider = FutureProvider.family<List<dynamic>, String>((ref, subjectId) async {
+  final repository = ref.watch(studentQuizRepositoryProvider);
+  return repository.getQuizzes(subjectId);
+});
 
-  final List<Question> questions;
+final studentQuizDetailProvider = FutureProvider.family<Map<String, dynamic>, String>((ref, quizId) async {
+  final repository = ref.watch(studentQuizRepositoryProvider);
+  return repository.getQuizDetail(quizId);
+});
+
+class QuizRuntimeState {
+  final StartQuizResponse? submission;
   final int currentQuestionIndex;
   final Map<String, String> selectedAnswers;
-  final int remainingSeconds;
-  final int initialDurationSeconds;
-  final bool isLoading;
+  final Map<String, bool> isCorrectMap;
+  final Map<String, String> correctOptionMap;
   final bool isSubmitting;
+  final bool isFinished;
+  final bool isLoading;
   final String? errorMessage;
-  final String? submissionId;
+  final SubmissionResult? result;
+  final int remainingSeconds;
+  final Map<String, List<String>> disabledOptions;
 
-  QuizState copyWith({
-    List<Question>? questions,
+  QuizRuntimeState({
+    this.submission,
+    this.currentQuestionIndex = 0,
+    this.selectedAnswers = const {},
+    this.isCorrectMap = const {},
+    this.correctOptionMap = const {},
+    this.isSubmitting = false,
+    this.isFinished = false,
+    this.isLoading = false,
+    this.errorMessage,
+    this.result,
+    this.remainingSeconds = 0,
+    this.disabledOptions = const {},
+  });
+
+  QuizRuntimeState copyWith({
+    StartQuizResponse? submission,
     int? currentQuestionIndex,
     Map<String, String>? selectedAnswers,
-    int? remainingSeconds,
-    int? initialDurationSeconds,
-    bool? isLoading,
+    Map<String, bool>? isCorrectMap,
+    Map<String, String>? correctOptionMap,
     bool? isSubmitting,
-    Object? errorMessage = _unset,
-    Object? submissionId = _unset,
+    bool? isFinished,
+    bool? isLoading,
+    String? errorMessage,
+    SubmissionResult? result,
+    int? remainingSeconds,
+    Map<String, List<String>>? disabledOptions,
   }) {
-    return QuizState(
-      questions: questions ?? this.questions,
+    return QuizRuntimeState(
+      submission: submission ?? this.submission,
       currentQuestionIndex: currentQuestionIndex ?? this.currentQuestionIndex,
       selectedAnswers: selectedAnswers ?? this.selectedAnswers,
-      remainingSeconds: remainingSeconds ?? this.remainingSeconds,
-      initialDurationSeconds:
-          initialDurationSeconds ?? this.initialDurationSeconds,
-      isLoading: isLoading ?? this.isLoading,
+      isCorrectMap: isCorrectMap ?? this.isCorrectMap,
+      correctOptionMap: correctOptionMap ?? this.correctOptionMap,
       isSubmitting: isSubmitting ?? this.isSubmitting,
-      errorMessage: identical(errorMessage, _unset)
-          ? this.errorMessage
-          : errorMessage as String?,
-      submissionId: identical(submissionId, _unset)
-          ? this.submissionId
-          : submissionId as String?,
+      isFinished: isFinished ?? this.isFinished,
+      isLoading: isLoading ?? this.isLoading,
+      errorMessage: errorMessage ?? this.errorMessage,
+      result: result ?? this.result,
+      remainingSeconds: remainingSeconds ?? this.remainingSeconds,
+      disabledOptions: disabledOptions ?? this.disabledOptions,
     );
   }
+
+  List<Question> get questions => submission?.questions ?? [];
+  Question? get currentQuestion => (submission != null && currentQuestionIndex < questions.length) ? questions[currentQuestionIndex] : null;
 }
 
-class QuizNotifier extends StateNotifier<QuizState> {
-  QuizNotifier(this._repository, this._ref) : super(QuizState());
-
-  final QuizRepository _repository;
+class QuizRuntimeController extends StateNotifier<QuizRuntimeState> {
+  final StudentQuizRepository _repository;
   final Ref _ref;
   Timer? _timer;
-  Future<void>? _lastAnswerSync;
+  int _elapsedSeconds = 0;
 
-  Future<void> startQuiz(String contestId, String studentId) async {
-    _timer?.cancel();
-    _ref.read(quizResultProvider.notifier).state = null;
-    state = QuizState(isLoading: true);
+  QuizRuntimeController(this._repository, this._ref) : super(QuizRuntimeState());
 
+  Future<void> startQuiz(String quizId) async {
+    state = state.copyWith(isLoading: true, errorMessage: null);
     try {
-      final responseData = await _repository.getStudentContestDetail(contestId);
-      final questionsData =
-          responseData['questions'] ?? responseData['questionList'];
-
-      if (questionsData is! List) {
-        state = state.copyWith(
-          isLoading: false,
-          errorMessage:
-              'Không tìm thấy danh sách câu hỏi trong phản hồi từ server.',
-        );
-        return;
-      }
-
-      final questions = questionsData
-          .map((item) => Question.fromJson(Map<String, dynamic>.from(item)))
-          .toList();
-
-      if (questions.isEmpty) {
-        state = state.copyWith(
-          isLoading: false,
-          errorMessage: 'Cuộc thi này hiện chưa có câu hỏi nào.',
-        );
-        return;
-      }
-
-      final submissionData =
-          await _repository.startSubmission(contestId, studentId);
-      final submissionId = (submissionData['submissionId'] ??
-              submissionData['id'] ??
-              submissionData['_id'])
-          ?.toString();
-
-      if (submissionId == null || submissionId.isEmpty) {
-        state = state.copyWith(
-          isLoading: false,
-          errorMessage: 'Server không trả về submissionId hợp lệ.',
-        );
-        return;
-      }
-
-      final contestInfo = responseData['contest'];
-      final durationValue = contestInfo is Map
-          ? (contestInfo['durationMinutes'] ??
-              responseData['durationMinutes'] ??
-              45)
-          : (responseData['durationMinutes'] ?? 45);
-      final durationMinutes = durationValue is num
-          ? durationValue.toInt()
-          : int.tryParse(durationValue?.toString() ?? '') ?? 45;
-
-      state = QuizState(
-        questions: questions,
-        submissionId: submissionId,
-        remainingSeconds: durationMinutes * 60,
-        initialDurationSeconds: durationMinutes * 60,
-        isLoading: false,
-      );
-
-      _startTimer();
-    } on AppFailure catch (e) {
-      state = state.copyWith(isLoading: false, errorMessage: e.message);
-    } catch (e) {
+      final submission = await _repository.startQuiz(quizId);
+      _elapsedSeconds = 0;
       state = state.copyWith(
+        submission: submission,
         isLoading: false,
-        errorMessage: 'Lỗi hệ thống: $e',
+        remainingSeconds: submission.durationMinutes * 60,
       );
+      _startTimer();
+    } catch (e) {
+      state = state.copyWith(isLoading: false, errorMessage: e.toString());
     }
   }
 
   void _startTimer() {
     _timer?.cancel();
     _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      _elapsedSeconds++;
       if (state.remainingSeconds > 0) {
-        state = state.copyWith(
-          remainingSeconds: state.remainingSeconds - 1,
-        );
+        state = state.copyWith(remainingSeconds: state.remainingSeconds - 1);
       } else {
         timer.cancel();
-        unawaited(finishQuiz());
+        finishQuiz();
       }
     });
   }
 
-  Future<void> selectAnswer(String questionId, String answerId) async {
-    if (state.selectedAnswers.containsKey(questionId)) {
-      return;
-    }
+  Future<void> selectAnswer(String questionId, String optionKey) async {
+    if (state.submission == null) return;
+    if (state.isCorrectMap.containsKey(questionId)) return;
 
     final newAnswers = Map<String, String>.from(state.selectedAnswers);
-    newAnswers[questionId] = answerId;
+    newAnswers[questionId] = optionKey;
     state = state.copyWith(selectedAnswers: newAnswers);
 
-    final submissionId = state.submissionId;
-    if (submissionId == null) {
-      return;
-    }
-
-    final sync = _repository.submitAnswer(submissionId, questionId, answerId);
     try {
-      _lastAnswerSync = sync;
-      await sync;
-    } catch (e) {
-      debugPrint('Sync error: $e');
-    } finally {
-      if (identical(_lastAnswerSync, sync)) {
-        _lastAnswerSync = null;
-      }
-    }
+      final response = await _repository.submitAnswer(state.submission!.submissionId, questionId, optionKey);
+      final newIsCorrectMap = Map<String, bool>.from(state.isCorrectMap);
+      final newCorrectOptionMap = Map<String, String>.from(state.correctOptionMap);
+      newIsCorrectMap[questionId] = response['isCorrect'] ?? false;
+      newCorrectOptionMap[questionId] = response['correctOption'] ?? '';
+      state = state.copyWith(isCorrectMap: newIsCorrectMap, correctOptionMap: newCorrectOptionMap);
+    } catch (e) {}
   }
 
   void nextQuestion() {
-    if (state.currentQuestionIndex < state.questions.length - 1) {
-      state = state.copyWith(
-        currentQuestionIndex: state.currentQuestionIndex + 1,
-      );
+    if (state.submission != null && state.currentQuestionIndex < state.questions.length - 1) {
+      state = state.copyWith(currentQuestionIndex: state.currentQuestionIndex + 1);
     }
   }
 
-  Future<QuizResult?> finishQuiz() async {
-    if (state.isSubmitting || state.submissionId == null) {
-      return _ref.read(quizResultProvider);
+  void previousQuestion() {
+    if (state.currentQuestionIndex > 0) {
+      state = state.copyWith(currentQuestionIndex: state.currentQuestionIndex - 1);
     }
+  }
 
-    _timer?.cancel();
-    state = state.copyWith(isSubmitting: true, errorMessage: null);
-
+  Future<void> usePowerUp(String type) async {
+    final currentQuestionId = state.currentQuestion?.id;
+    if (state.submission == null || currentQuestionId == null) return;
     try {
-      await _lastAnswerSync;
+      final response = await _repository.usePowerUp(state.submission!.submissionId, currentQuestionId, type);
+      if (type == 'FIFTY_FIFTY' && response['disabledKeys'] != null) {
+        final disabledKeys = List<String>.from(response['disabledKeys']);
+        final newDisabled = Map<String, List<String>>.from(state.disabledOptions);
+        newDisabled[currentQuestionId] = disabledKeys;
+        state = state.copyWith(disabledOptions: newDisabled);
+      } else if (type == 'SKIP') {
+        nextQuestion();
+      }
+    } catch (e) {}
+  }
 
-      final responseData =
-          await _repository.finishSubmission(state.submissionId!);
-      final totalPossibleScore = state.questions.fold<double>(
-        0,
-        (sum, question) => sum + question.points,
+  Future<void> finishQuiz() async {
+    if (state.submission == null || state.isFinished) return;
+    state = state.copyWith(isSubmitting: true);
+    _timer?.cancel();
+    try {
+      final resultData = await _repository.finishQuiz(state.submission!.submissionId);
+      final subResult = SubmissionResult.fromJson(resultData);
+      final finalResult = QuizResult(
+        score: subResult.totalScore,
+        correctCount: subResult.correctCount,
+        totalQuestions: subResult.totalQuestions,
+        elapsedSeconds: _elapsedSeconds,
+        completedAt: DateTime.now(),
       );
-      final elapsedSeconds = state.initialDurationSeconds > 0
-          ? state.initialDurationSeconds - state.remainingSeconds
-          : 0;
-      final result = QuizResult.fromSubmission(
-        submissionData: responseData,
-        totalPossibleScore: totalPossibleScore > 0
-            ? totalPossibleScore
-            : (state.questions.length * 10).toDouble(),
-        elapsedSeconds: elapsedSeconds,
-      );
-
-      _ref.read(quizResultProvider.notifier).state = result;
-      state = state.copyWith(isSubmitting: false);
-      return result;
-    } on AppFailure catch (e) {
-      state = state.copyWith(isSubmitting: false, errorMessage: e.message);
-      return null;
+      _ref.read(quizResultProvider.notifier).state = finalResult;
+      state = state.copyWith(isSubmitting: false, isFinished: true, result: subResult);
     } catch (e) {
-      state = state.copyWith(
-        isSubmitting: false,
-        errorMessage: 'Không thể kết thúc bài thi: $e',
-      );
-      return null;
+      state = state.copyWith(isSubmitting: false);
+      rethrow;
     }
   }
 
@@ -246,23 +194,18 @@ class QuizNotifier extends StateNotifier<QuizState> {
   }
 }
 
-final quizProvider = StateNotifierProvider<QuizNotifier, QuizState>((ref) {
-  final repository = ref.watch(quizRepositoryProvider);
-  return QuizNotifier(repository, ref);
+final quizProvider = StateNotifierProvider<QuizRuntimeController, QuizRuntimeState>((ref) {
+  final repository = ref.watch(studentQuizRepositoryProvider);
+  return QuizRuntimeController(repository, ref);
 });
 
 final currentQuestionProvider = Provider<Question?>((ref) {
   final quizState = ref.watch(quizProvider);
-  if (quizState.questions.isEmpty) {
-    return null;
-  }
-  return quizState.questions[quizState.currentQuestionIndex];
+  return quizState.currentQuestion;
 });
 
 final quizProgressProvider = Provider<double>((ref) {
   final quizState = ref.watch(quizProvider);
-  if (quizState.questions.isEmpty) {
-    return 0.0;
-  }
+  if (quizState.questions.isEmpty) return 0.0;
   return (quizState.currentQuestionIndex + 1) / quizState.questions.length;
 });

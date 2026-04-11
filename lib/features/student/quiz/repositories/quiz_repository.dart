@@ -1,68 +1,65 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/network/api_client.dart';
 import '../models/question.dart';
+import '../models/quiz_submission.dart';
 
-final quizRepositoryProvider = Provider<QuizRepository>((ref) {
+final studentQuizRepositoryProvider = Provider<StudentQuizRepository>((ref) {
   final apiClient = ref.watch(apiClientProvider);
-  return QuizRepository(apiClient);
+  return StudentQuizRepository(apiClient);
 });
 
-class QuizRepository {
+class StudentQuizRepository {
   final ApiClient _apiClient;
+  StudentQuizRepository(this._apiClient);
 
-  QuizRepository(this._apiClient);
-
-  // API lấy chi tiết cuộc thi kèm danh sách câu hỏi dành cho Student
-  Future<Map<String, dynamic>> getStudentContestDetail(String contestId) async {
-    final response = await _apiClient.get('/api/student/contests/$contestId');
+  // 1. Lấy danh sách Quiz theo Subject
+  Future<List<dynamic>> getQuizzes(String subjectId) async {
+    final response = await _apiClient.get('/api/student/quizzes', queryParameters: {'subjectId': subjectId});
     return response.data;
   }
 
-  // API lấy danh sách câu hỏi (dùng endpoint admin nếu cần hoặc contest detail)
-  Future<List<Question>> getQuestionsForContest(String contestId) async {
-    // Ưu tiên dùng endpoint detail của contest vì nó trả về questions mảng phẳng
-    final data = await getStudentContestDetail(contestId);
-    final List<dynamic> questionsRaw = data['questions'] ?? [];
-    return questionsRaw.map((q) => Question.fromJson(q)).toList();
-  }
-
-  // API bắt đầu làm bài
-  Future<Map<String, dynamic>> startSubmission(
-      String contestId, String studentId) async {
-    final response =
-        await _apiClient.post('/api/student/submissions/$contestId/start');
+  // 2. Lấy chi tiết Quiz
+  Future<Map<String, dynamic>> getQuizDetail(String quizId) async {
+    final response = await _apiClient.get('/api/student/quizzes/$quizId');
     return response.data;
   }
 
-  // API nộp đáp án từng câu
-  Future<void> submitAnswer(
-      String submissionId, String questionId, String answer) async {
-    await _apiClient.post(
+  // 3. Start Quiz -> Nhận submissionId và list questions
+  Future<StartQuizResponse> startQuiz(String quizId) async {
+    final response = await _apiClient.post('/api/student/quizzes/$quizId/start');
+    return StartQuizResponse.fromJson(response.data);
+  }
+
+  // 4. Submit từng câu -> Trả về kết quả đúng/sai realtime
+  Future<Map<String, dynamic>> submitAnswer(String submissionId, String questionId, String selectedOption) async {
+    final response = await _apiClient.post(
       '/api/student/submissions/$submissionId/answer',
       data: {
         'questionId': questionId,
-        'selectedOption': answer,
+        'selectedOption': selectedOption,
       },
     );
+    return response.data;
   }
 
-  // API kết thúc bài thi (Chốt điểm)
-  Future<Map<String, dynamic>> finishSubmission(String submissionId) async {
-    final response =
-        await _apiClient.post('/api/student/submissions/$submissionId/finish');
-    return response.data; // Trả về kết quả: score, correctCount, time, v.v.
-  }
-
-  // API sử dụng quyền trợ giúp
-  Future<Map<String, dynamic>> usePowerUp(
-      String submissionId, String questionId, String type) async {
+  // 5. Use Power-up
+  Future<Map<String, dynamic>> usePowerUp(String submissionId, String questionId, String type) async {
     final response = await _apiClient.post(
       '/api/student/submissions/$submissionId/power-up',
-      data: {
-        'type': type, // "50_50", "SKIP", "ASK_AUDIENCE"
-        'questionId': questionId,
-      },
+      data: {'type': type, 'questionId': questionId},
     );
+    return response.data;
+  }
+
+  // 6. Finish
+  Future<Map<String, dynamic>> finishQuiz(String submissionId) async {
+    final response = await _apiClient.post('/api/student/submissions/$submissionId/finish');
+    return response.data;
+  }
+
+  // 7. History
+  Future<List<dynamic>> getHistory() async {
+    final response = await _apiClient.get('/api/student/submissions/history');
     return response.data;
   }
 }
