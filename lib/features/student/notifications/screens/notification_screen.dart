@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 import '../providers/notification_provider.dart';
-import '../../../../core/router/app_router.dart';
 
 class NotificationScreen extends ConsumerWidget {
   const NotificationScreen({super.key});
@@ -11,181 +9,135 @@ class NotificationScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final state = ref.watch(notificationProvider);
     final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
+
+    // Listen for action messages (Success/Error)
+    ref.listen(notificationProvider, (previous, next) {
+      if (next.actionMessage != null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(next.actionMessage!)),
+        );
+      }
+    });
 
     return Scaffold(
-      backgroundColor: isDark ? theme.scaffoldBackgroundColor : Colors.grey[50],
       appBar: AppBar(
-        title: const Text('Thông báo', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 20)),
-        centerTitle: true,
-        elevation: 0,
+        title: const Text('Thông báo', style: TextStyle(fontWeight: FontWeight.bold)),
         actions: [
           if (state.items.isNotEmpty)
             TextButton(
               onPressed: () => ref.read(notificationProvider.notifier).markAllAsRead(),
-              child: const Text('Đọc tất cả', style: TextStyle(fontWeight: FontWeight.bold)),
+              child: const Text('Đọc tất cả'),
             ),
         ],
       ),
-      body: RefreshIndicator(
-        onRefresh: () => ref.read(notificationProvider.notifier).fetchNotifications(),
-        child: state.items.isEmpty
-            ? ListView( // Dùng ListView để có thể Pull to refresh kể cả khi rỗng
-                children: [
-                  SizedBox(height: MediaQuery.of(context).size.height * 0.3),
-                  Center(
-                    child: Column(
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.all(24),
-                          decoration: BoxDecoration(
-                            color: theme.colorScheme.primary.withOpacity(0.05),
-                            shape: BoxShape.circle,
-                          ),
-                          child: Icon(Icons.notifications_none_outlined, size: 80, color: theme.colorScheme.primary.withOpacity(0.5)),
-                        ),
-                        const SizedBox(height: 24),
-                        const Text(
-                          'Bạn chưa có thông báo nào',
-                          style: TextStyle(fontSize: 16, color: Colors.grey, fontWeight: FontWeight.w500),
-                        ),
-                        const SizedBox(height: 8),
-                        const Text('Vuốt xuống để cập nhật', style: TextStyle(fontSize: 12, color: Colors.grey)),
-                      ],
+      body: Stack(
+        children: [
+          RefreshIndicator(
+            onRefresh: () => ref.read(notificationProvider.notifier).fetchNotifications(),
+            child: state.items.isEmpty
+                ? _buildEmptyState()
+                : ListView.builder(
+                    itemCount: state.items.length,
+                    itemBuilder: (context, index) {
+                      final item = state.items[index];
+                      return _NotificationTile(item: item);
+                    },
+                  ),
+          ),
+          if (state.isLoading)
+            const Center(child: CircularProgressIndicator()),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildEmptyState() {
+    return const Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(Icons.notifications_off_outlined, size: 64, color: Colors.grey),
+          SizedBox(height: 16),
+          Text('Bạn không có thông báo nào', style: TextStyle(color: Colors.grey)),
+        ],
+      ),
+    );
+  }
+}
+
+class _NotificationTile extends ConsumerWidget {
+  final dynamic item;
+  const _NotificationTile({required this.item});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final isInvite = item.type == 'CLASSROOM_INVITE';
+
+    return Card(
+      margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      color: item.read ? null : Colors.blue.withOpacity(0.05),
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(
+                  isInvite ? Icons.group_add : Icons.notifications,
+                  color: isInvite ? Colors.blue : Colors.orange,
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    item.title,
+                    style: TextStyle(
+                      fontWeight: item.read ? FontWeight.normal : FontWeight.bold,
+                      fontSize: 16,
                     ),
                   ),
-                ],
-              )
-            : ListView.separated(
-                padding: const EdgeInsets.symmetric(vertical: 12),
-                itemCount: state.items.length,
-                separatorBuilder: (context, index) => const Divider(height: 1, indent: 80),
-                itemBuilder: (context, index) {
-                  final item = state.items[index];
-                  final translatedTitle = _translateTitle(item.title);
-                  final translatedMessage = _translateMessage(item.message);
-
-                  return Material(
-                    color: item.read ? Colors.transparent : theme.colorScheme.primary.withOpacity(0.03),
-                    child: InkWell(
-                      onTap: () {
-                        ref.read(notificationProvider.notifier).markAsRead(item.id);
-                        if (item.contestId != null) {
-                          context.pushNamed(AppRouteNames.studentQuiz, pathParameters: {'contestId': item.contestId!});
-                        }
-                      },
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-                        child: Row(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            _buildNotificationIcon(item, theme),
-                            const SizedBox(width: 16),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Row(
-                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                    children: [
-                                      Expanded(
-                                        child: Text(
-                                          translatedTitle,
-                                          style: TextStyle(
-                                            fontWeight: item.read ? FontWeight.w600 : FontWeight.bold,
-                                            fontSize: 15,
-                                            color: isDark ? Colors.white : Colors.black87,
-                                          ),
-                                          maxLines: 1,
-                                          overflow: TextOverflow.ellipsis,
-                                        ),
-                                      ),
-                                      if (!item.read)
-                                        Container(
-                                          width: 8,
-                                          height: 8,
-                                          decoration: BoxDecoration(
-                                            color: theme.colorScheme.primary,
-                                            shape: BoxShape.circle,
-                                          ),
-                                        ),
-                                    ],
-                                  ),
-                                  const SizedBox(height: 4),
-                                  Text(
-                                    translatedMessage,
-                                    style: TextStyle(
-                                      fontSize: 13,
-                                      color: isDark ? Colors.white70 : Colors.black54,
-                                      height: 1.4,
-                                    ),
-                                    maxLines: 2,
-                                    overflow: TextOverflow.ellipsis,
-                                  ),
-                                  const SizedBox(height: 8),
-                                  Text(
-                                    _formatDateTime(item.createdAt),
-                                    style: const TextStyle(fontSize: 11, color: Colors.grey, fontWeight: FontWeight.w500),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Text(item.message, style: const TextStyle(color: Colors.black87)),
+            const SizedBox(height: 12),
+            if (isInvite && !item.read) // Show actions only for unread invites
+              Row(
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  OutlinedButton(
+                    onPressed: () => ref.read(notificationProvider.notifier).declineClassroomInvite(item.id),
+                    style: OutlinedButton.styleFrom(
+                      minimumSize: const Size(80, 36), // Fix infinite width error
                     ),
-                  );
-                },
+                    child: const Text('Từ chối'),
+                  ),
+                  const SizedBox(width: 12),
+                  ElevatedButton(
+                    onPressed: () => ref.read(notificationProvider.notifier).acceptClassroomInvite(item.id),
+                    style: ElevatedButton.styleFrom(
+                      minimumSize: const Size(100, 36), // Fix infinite width error
+                    ),
+                    child: const Text('Chấp nhận'),
+                  ),
+                ],
               ),
+            const SizedBox(height: 8),
+            Align(
+              alignment: Alignment.bottomRight,
+              child: Text(
+                _formatTime(item.createdAt),
+                style: const TextStyle(fontSize: 12, color: Colors.grey),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
 
-  String _translateTitle(String title) {
-    if (title.contains('New contest available')) {
-      final parts = title.split(':');
-      final contestName = parts.length > 1 ? parts.last.trim() : '';
-      return 'Cuộc thi mới: $contestName';
-    }
-    return title;
-  }
-
-  String _translateMessage(String message) {
-    if (message.contains('Subject') && message.contains('has a new contest')) {
-      final regExp = RegExp(r'Subject (.*) has a new contest: (.*)');
-      final match = regExp.firstMatch(message);
-      if (match != null) {
-        final subject = match.group(1);
-        final contest = match.group(2);
-        return 'Môn $subject vừa có cuộc thi mới: $contest. Hãy tham gia ngay!';
-      }
-    }
-    return message;
-  }
-
-  Widget _buildNotificationIcon(dynamic item, ThemeData theme) {
-    IconData iconData = Icons.notifications_outlined;
-    Color iconColor = theme.colorScheme.primary;
-    if (item.type == 'NEW_CONTEST') {
-      iconData = Icons.assignment_outlined;
-      iconColor = Colors.orange;
-    }
-    return Container(
-      width: 48,
-      height: 48,
-      decoration: BoxDecoration(
-        color: item.read ? Colors.grey[200] : iconColor.withOpacity(0.1),
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Icon(iconData, color: item.read ? Colors.grey : iconColor, size: 24),
-    );
-  }
-
-  String _formatDateTime(DateTime dt) {
-    final now = DateTime.now();
-    final difference = now.difference(dt);
-    if (difference.inMinutes < 60) return '${difference.inMinutes} phút trước';
-    if (difference.inHours < 24) return '${difference.inHours} giờ trước';
-    return '${dt.hour}:${dt.minute.toString().padLeft(2, '0')} - ${dt.day}/${dt.month}';
+  String _formatTime(DateTime time) {
+    return '${time.hour}:${time.minute.toString().padLeft(2, '0')} - ${time.day}/${time.month}';
   }
 }

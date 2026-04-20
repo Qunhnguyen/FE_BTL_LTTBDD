@@ -1,16 +1,18 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
+import '../../../../core/router/app_router.dart';
+import '../../../../features/classroom/classroom_providers.dart';
+import '../../../../features/classroom/presentation/cubit/classroom_state.dart';
 import '../models/subject.dart';
-import '../models/classroom.dart';
-import '../repositories/classroom_repository.dart';
 import '../../../auth/models/user.dart';
 
-// Provider duy nhất và chuẩn xác cho danh sách lớp
-final classroomsProvider = FutureProvider.family<List<Classroom>, String>((ref, subjectId) {
-  return ref.watch(classroomRepositoryProvider).getClassroomsBySubject(subjectId);
+// Provider lấy danh sách lớp sử dụng Repository chuẩn Clean Architecture
+final classroomsProvider = FutureProvider.family<List<dynamic>, String>((ref, subjectId) {
+  return ref.watch(classroomRepositoryProvider).getTeacherClassrooms(subjectId);
 });
 
-// Provider lấy danh sách sinh viên (chỉ lấy một lần)
+// Provider lấy danh sách sinh viên toàn hệ thống để mời
 final allStudentsProvider = FutureProvider<List<User>>((ref) {
   return ref.watch(classroomRepositoryProvider).getAllStudents();
 });
@@ -26,7 +28,7 @@ class TeacherClassroomListScreen extends ConsumerStatefulWidget {
 class _TeacherClassroomListScreenState extends ConsumerState<TeacherClassroomListScreen> with AutomaticKeepAliveClientMixin {
   
   @override
-  bool get wantKeepAlive => true; // Giữ trạng thái tab, không load lại khi chuyển qua lại
+  bool get wantKeepAlive => true;
 
   @override
   Widget build(BuildContext context) {
@@ -48,6 +50,15 @@ class _TeacherClassroomListScreenState extends ConsumerState<TeacherClassroomLis
                       classroom: cls,
                       onDelete: () => _handleDelete(cls.id),
                       onEdit: () => _showAddEditClassroomDialog(classroom: cls),
+                      onTap: () {
+                        context.pushNamed(
+                          AppRouteNames.teacherClassroomDetail,
+                          pathParameters: {
+                            'subjectId': widget.subject.id,
+                            'classroomId': cls.id,
+                          },
+                        );
+                      },
                     );
                   },
                 ),
@@ -84,7 +95,8 @@ class _TeacherClassroomListScreenState extends ConsumerState<TeacherClassroomLis
     final ok = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Xóa lớp học?'),
+        title: const Text('Xác nhận xóa lớp học?'),
+        content: const Text('Hành động này không thể hoàn tác.'),
         actions: [
           TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Hủy')),
           TextButton(onPressed: () => Navigator.pop(context, true), child: const Text('Xóa', style: TextStyle(color: Colors.red))),
@@ -93,12 +105,12 @@ class _TeacherClassroomListScreenState extends ConsumerState<TeacherClassroomLis
     );
     
     if (ok == true) {
-      await ref.read(classroomRepositoryProvider).deleteClassroom(widget.subject.id, classroomId);
+      await ref.read(classroomCubitProvider.notifier).deleteClassroom(widget.subject.id, classroomId);
       ref.invalidate(classroomsProvider(widget.subject.id));
     }
   }
 
-  void _showAddEditClassroomDialog({Classroom? classroom}) {
+  void _showAddEditClassroomDialog({dynamic classroom}) {
     showDialog(
       context: context,
       builder: (context) => _ClassroomDialog(
@@ -109,37 +121,50 @@ class _TeacherClassroomListScreenState extends ConsumerState<TeacherClassroomLis
   }
 }
 
-// Widget Card tách riêng để tối ưu performance
 class _ClassroomCard extends StatelessWidget {
-  final Classroom classroom;
+  final dynamic classroom;
   final VoidCallback onDelete;
   final VoidCallback onEdit;
+  final VoidCallback onTap;
 
-  const _ClassroomCard({required this.classroom, required this.onDelete, required this.onEdit});
+  const _ClassroomCard({
+    required this.classroom,
+    required this.onDelete,
+    required this.onEdit,
+    required this.onTap,
+  });
 
   @override
   Widget build(BuildContext context) {
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
       child: ListTile(
-        leading: CircleAvatar(child: Text('${classroom.studentCount}')),
+        leading: CircleAvatar(
+          backgroundColor: Theme.of(context).primaryColor.withOpacity(0.1),
+          child: Text('${classroom.studentCount}', style: TextStyle(color: Theme.of(context).primaryColor, fontWeight: FontWeight.bold)),
+        ),
         title: Text(classroom.name, style: const TextStyle(fontWeight: FontWeight.bold)),
         subtitle: Text(
-          'SV: ${classroom.students.map((s) => s.name).join(", ")}',
+          'SV: ${classroom.studentCount == 0 ? "Chưa có sinh viên" : "Nhấn để xem danh sách"}',
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
         ),
-        trailing: IconButton(icon: const Icon(Icons.delete_outline, color: Colors.red), onPressed: onDelete),
-        onTap: onEdit,
+        trailing: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            IconButton(icon: const Icon(Icons.edit_outlined, size: 20), onPressed: onEdit),
+            IconButton(icon: const Icon(Icons.delete_outline, color: Colors.red, size: 20), onPressed: onDelete),
+          ],
+        ),
+        onTap: onTap,
       ),
     );
   }
 }
 
-// Widget Dialog tách riêng để tránh lag màn hình chính
 class _ClassroomDialog extends ConsumerStatefulWidget {
   final String subjectId;
-  final Classroom? classroom;
+  final dynamic classroom;
   const _ClassroomDialog({required this.subjectId, this.classroom});
 
   @override
@@ -149,13 +174,15 @@ class _ClassroomDialog extends ConsumerStatefulWidget {
 class _ClassroomDialogState extends ConsumerState<_ClassroomDialog> {
   late TextEditingController _nameController;
   late List<String> _selectedIds;
+  late List<String> _initialIds;
   bool _isSaving = false;
 
   @override
   void initState() {
     super.initState();
     _nameController = TextEditingController(text: widget.classroom?.name);
-    _selectedIds = List.from(widget.classroom?.studentIds ?? []);
+    _selectedIds = List<String>.from(widget.classroom?.studentIds ?? []);
+    _initialIds = List<String>.from(widget.classroom?.studentIds ?? []);
   }
 
   @override
@@ -163,24 +190,36 @@ class _ClassroomDialogState extends ConsumerState<_ClassroomDialog> {
     final studentsAsync = ref.watch(allStudentsProvider);
 
     return AlertDialog(
-      title: Text(widget.classroom == null ? 'Tạo lớp mới' : 'Sửa lớp học'),
+      title: Text(widget.classroom == null ? 'Tạo lớp mới' : 'Sửa lớp & Mời sinh viên'),
       content: SizedBox(
         width: double.maxFinite,
         height: 400,
         child: Column(
           children: [
-            TextField(controller: _nameController, decoration: const InputDecoration(labelText: 'Tên lớp')),
+            TextField(
+              controller: _nameController,
+              decoration: const InputDecoration(
+                labelText: 'Tên lớp',
+                hintText: 'VD: Lớp Java nâng cao',
+                border: OutlineInputBorder(),
+              ),
+            ),
             const SizedBox(height: 16),
+            const Align(alignment: Alignment.centerLeft, child: Text('Danh sách sinh viên:', style: TextStyle(fontWeight: FontWeight.bold))),
+            const Divider(),
             Expanded(
               child: studentsAsync.when(
                 data: (students) => ListView.builder(
                   itemCount: students.length,
                   itemBuilder: (context, index) {
                     final s = students[index];
+                    final isAlreadyIn = _initialIds.contains(s.id);
+
                     return CheckboxListTile(
                       title: Text(s.name),
+                      subtitle: Text(s.email + (isAlreadyIn ? " (Đã trong lớp)" : "")),
                       value: _selectedIds.contains(s.id),
-                      onChanged: (val) {
+                      onChanged: isAlreadyIn ? null : (val) {
                         setState(() {
                           if (val == true) _selectedIds.add(s.id);
                           else _selectedIds.remove(s.id);
@@ -200,21 +239,32 @@ class _ClassroomDialogState extends ConsumerState<_ClassroomDialog> {
         TextButton(onPressed: () => Navigator.pop(context), child: const Text('Hủy')),
         ElevatedButton(
           onPressed: _isSaving ? null : _save,
-          child: _isSaving ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2)) : const Text('Lưu'),
+          child: _isSaving ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2)) : Text(widget.classroom == null ? 'Lưu' : 'Cập nhật & Mời'),
         ),
       ],
     );
   }
 
   void _save() async {
-    if (_nameController.text.isEmpty) return;
+    if (_nameController.text.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Vui lòng nhập tên lớp')));
+      return;
+    }
     setState(() => _isSaving = true);
     try {
-      final repo = ref.read(classroomRepositoryProvider);
+      final notifier = ref.read(classroomCubitProvider.notifier);
       if (widget.classroom == null) {
-        await repo.createClassroom(widget.subjectId, _nameController.text, _selectedIds);
+        // Luồng tạo lớp mới và mời luôn
+        await notifier.createClassroom(widget.subjectId, _nameController.text, _selectedIds);
       } else {
-        await repo.updateClassroom(widget.subjectId, widget.classroom!.id, _nameController.text, _selectedIds);
+        // Luồng cập nhật tên và mời thêm người mới
+        if (_nameController.text != widget.classroom!.name) {
+          await notifier.updateClassroom(widget.subjectId, widget.classroom!.id, name: _nameController.text);
+        }
+        final newInvites = _selectedIds.where((id) => !_initialIds.contains(id)).toList();
+        if (newInvites.isNotEmpty) {
+          await notifier.sendInvites(widget.subjectId, widget.classroom!.id, newInvites);
+        }
       }
       ref.invalidate(classroomsProvider(widget.subjectId));
       if (mounted) Navigator.pop(context);

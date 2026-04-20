@@ -55,9 +55,9 @@ class MainShell extends StatelessWidget {
           label: 'Lịch sử',
         ),
         BottomNavigationBarItem(
-          icon: Icon(Icons.emoji_events_outlined),
-          activeIcon: Icon(Icons.emoji_events),
-          label: 'Xếp hạng',
+          icon: Icon(Icons.class_outlined),
+          activeIcon: Icon(Icons.class_),
+          label: 'Lớp học',
         ),
         BottomNavigationBarItem(
           icon: Icon(Icons.person_outline),
