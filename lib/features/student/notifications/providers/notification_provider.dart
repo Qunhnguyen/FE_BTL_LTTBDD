@@ -3,27 +3,32 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/notification_model.dart';
 import '../repositories/notification_repository.dart';
 import '../../../auth/providers/auth_provider.dart';
+import '../../../classroom/classroom_providers.dart';
 
 class NotificationState {
   final List<AppNotification> items;
   final int unreadCount;
   final bool isLoading;
+  final String? actionMessage; // To show success/error message for actions
 
   NotificationState({
     this.items = const [],
     this.unreadCount = 0,
     this.isLoading = false,
+    this.actionMessage,
   });
 
   NotificationState copyWith({
     List<AppNotification>? items,
     int? unreadCount,
     bool? isLoading,
+    String? actionMessage,
   }) {
     return NotificationState(
       items: items ?? this.items,
       unreadCount: unreadCount ?? this.unreadCount,
       isLoading: isLoading ?? this.isLoading,
+      actionMessage: actionMessage,
     );
   }
 }
@@ -38,21 +43,16 @@ class NotificationNotifier extends StateNotifier<NotificationState> {
   }
 
   void _init() {
-    // Chỉ chạy nếu là Sinh viên
     final authState = _ref.read(authProvider);
     if (authState.user?.role == 'STUDENT') {
       fetchNotifications();
-      // Bật Polling mỗi 60 giây
       _timer = Timer.periodic(const Duration(seconds: 60), (_) => fetchNotifications());
     }
   }
 
   Future<void> fetchNotifications() async {
-    // Kiểm tra role một lần nữa trước khi gọi API để chắc chắn
     final authState = _ref.read(authProvider);
-    if (authState.user?.role != 'STUDENT') {
-      return;
-    }
+    if (authState.user?.role != 'STUDENT') return;
 
     try {
       final data = await _repository.getNotifications();
@@ -65,10 +65,43 @@ class NotificationNotifier extends StateNotifier<NotificationState> {
         isLoading: false,
       );
     } catch (e) {
-      // Bỏ qua log lỗi 403 nếu lỡ gọi nhầm, để tránh làm rối console
       if (!e.toString().contains('403')) {
         print('Error fetching notifications: $e');
       }
+    }
+  }
+
+  Future<void> acceptClassroomInvite(String notificationId) async {
+    state = state.copyWith(isLoading: true, actionMessage: null);
+    try {
+      await _ref.read(classroomRepositoryProvider).acceptInvite(notificationId);
+      state = state.copyWith(
+        isLoading: false,
+        actionMessage: 'Đã tham gia lớp học thành công!'
+      );
+      await fetchNotifications();
+    } catch (e) {
+      state = state.copyWith(
+        isLoading: false,
+        actionMessage: 'Lỗi khi tham gia lớp: $e'
+      );
+    }
+  }
+
+  Future<void> declineClassroomInvite(String notificationId) async {
+    state = state.copyWith(isLoading: true, actionMessage: null);
+    try {
+      await _ref.read(classroomRepositoryProvider).declineInvite(notificationId);
+      state = state.copyWith(
+        isLoading: false,
+        actionMessage: 'Đã từ chối lời mời.'
+      );
+      await fetchNotifications();
+    } catch (e) {
+      state = state.copyWith(
+        isLoading: false,
+        actionMessage: 'Lỗi khi từ chối: $e'
+      );
     }
   }
 

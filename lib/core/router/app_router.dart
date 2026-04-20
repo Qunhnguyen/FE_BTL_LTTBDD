@@ -14,6 +14,7 @@ import '../../features/student/quiz/screens/quiz_result_screen.dart';
 import '../../features/student/quiz/screens/quiz_screen.dart';
 import '../../features/student/quiz/screens/quiz_catalog_screen.dart';
 import '../../features/student/notifications/screens/notification_screen.dart';
+import '../../features/student/classroom/screens/student_classroom_list_screen.dart';
 import '../../features/teacher/dashboard/screens/teacher_dashboard_screen.dart';
 import '../../features/teacher/dashboard/screens/contest_analytics_screen.dart';
 import '../../features/teacher/dashboard/screens/student_submission_detail_screen.dart';
@@ -25,7 +26,9 @@ import '../../features/teacher/subjects/screens/subject_management_screen.dart';
 import '../../features/teacher/subjects/screens/teacher_contest_list_screen.dart';
 import '../../features/teacher/subjects/screens/quiz_management_screen.dart';
 import '../../features/teacher/subjects/screens/create_quiz_form.dart';
+import '../../features/teacher/subjects/screens/teacher_classroom_detail_screen.dart';
 import '../../features/welcome/welcome_screen.dart';
+import '../../features/teacher/ai/screens/knowledge_management_screen.dart';
 import '../../features/teacher/ai/screens/knowledge_management_screen.dart';
 import '../../features/teacher/ai/screens/ai_builder_screen.dart';
 import '../../features/teacher/ai/screens/ai_job_detail_screen.dart';
@@ -44,7 +47,7 @@ import '../../features/admin/screens/admin_ai_job_detail_screen.dart';
 final _rootNavigatorKey = GlobalKey<NavigatorState>();
 final _studentHomeKey = GlobalKey<NavigatorState>();
 final _studentHistoryKey = GlobalKey<NavigatorState>();
-final _studentLeaderboardKey = GlobalKey<NavigatorState>();
+final _studentClassroomKey = GlobalKey<NavigatorState>();
 final _studentProfileKey = GlobalKey<NavigatorState>();
 final _teacherDashboardKey = GlobalKey<NavigatorState>();
 final _teacherSubjectsKey = GlobalKey<NavigatorState>();
@@ -67,6 +70,7 @@ class AppRouteNames {
   // Student
   static const String studentHome = 'studentHome';
   static const String studentHistory = 'studentHistory';
+  static const String studentClassrooms = 'studentClassrooms';
   static const String studentQuizCatalog = 'studentQuizCatalog';
   static const String studentQuiz = 'studentQuiz';
   static const String studentResult = 'studentResult';
@@ -87,6 +91,7 @@ class AppRouteNames {
   static const String teacherAiBuilder = 'teacherAiBuilder';
   static const String teacherAiJobDetail = 'teacherAiJobDetail';
   static const String teacherContests = 'teacherContests';
+  static const String teacherClassroomDetail = 'teacherClassroomDetail';
   static const String teacherSettings = 'teacherSettings';
   
   // Admin
@@ -277,6 +282,14 @@ final routerProvider = Provider<GoRouter>((ref) {
                       GoRoute(path: 'knowledge', name: AppRouteNames.teacherKnowledge, builder: (context, state) => KnowledgeManagementScreen(subjectId: state.pathParameters['subjectId']!)),
                       GoRoute(path: 'ai-builder', name: AppRouteNames.teacherAiBuilder, builder: (context, state) => AiBuilderScreen(subjectId: state.pathParameters['subjectId']!)),
                       GoRoute(path: 'ai-jobs/:jobId', name: AppRouteNames.teacherAiJobDetail, builder: (context, state) => AiJobDetailScreen(subjectId: state.pathParameters['subjectId']!, jobId: state.pathParameters['jobId']!)),
+                      GoRoute(
+                        path: 'classrooms/:classroomId',
+                        name: AppRouteNames.teacherClassroomDetail,
+                        builder: (context, state) => TeacherClassroomDetailScreen(
+                          subjectId: state.pathParameters['subjectId']!,
+                          classroomId: state.pathParameters['classroomId']!,
+                        ),
+                      ),
                     ],
                   ),
                 ],
@@ -307,7 +320,7 @@ final routerProvider = Provider<GoRouter>((ref) {
                 builder: (context, state) => const StudentHomeScreen(),
                 routes: [
                   GoRoute(
-                    path: 'notifications', // DI CHUYỂN VÀO ĐÂY
+                    path: 'notifications',
                     name: AppRouteNames.studentNotifications,
                     builder: (context, state) => const NotificationScreen(),
                   ),
@@ -324,7 +337,16 @@ final routerProvider = Provider<GoRouter>((ref) {
             ],
           ),
           StatefulShellBranch(navigatorKey: _studentHistoryKey, routes: [GoRoute(path: '/student/history', name: AppRouteNames.studentHistory, builder: (context, state) => const QuizHistoryScreen())]),
-          StatefulShellBranch(navigatorKey: _studentLeaderboardKey, routes: [GoRoute(path: '/student/leaderboard', name: AppRouteNames.studentLeaderboard, builder: (context, state) => const LeaderboardScreen())]),
+          StatefulShellBranch(
+            navigatorKey: _studentClassroomKey, 
+            routes: [
+              GoRoute(
+                path: '/student/classrooms', 
+                name: AppRouteNames.studentClassrooms, 
+                builder: (context, state) => const StudentClassroomListScreen()
+              )
+            ]
+          ),
           StatefulShellBranch(navigatorKey: _studentProfileKey, routes: [GoRoute(path: '/student/profile', name: AppRouteNames.studentProfile, builder: (context, state) => const StudentProfileScreen())]),
         ],
       ),
