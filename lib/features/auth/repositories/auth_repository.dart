@@ -22,10 +22,10 @@ class AuthRepository {
   static const _userRoleKey = 'user_role';
 
   Future<User> login(String email, String password, String role) async {
+    // Chỉ gửi email và password theo đúng spec API BE
     final response = await _apiClient.post('/api/auth/login', data: {
       'email': email,
       'password': password,
-      'role': role,
     });
 
     final String token = response.data['token'];
@@ -58,7 +58,6 @@ class AuthRepository {
     }
   }
 
-  // Cập nhật thông tin profile (chỉ sửa tên)
   Future<User> updateProfile(String name) async {
     final response = await _apiClient.put('/api/student/profile', data: {
       'name': name,
@@ -67,7 +66,6 @@ class AuthRepository {
     return User.fromJson(Map<String, dynamic>.from(response.data as Map), token: token);
   }
 
-  // Upload ảnh đại diện
   Future<User> uploadAvatar(File imageFile) async {
     final formData = FormData.fromMap({
       'file': await MultipartFile.fromFile(imageFile.path),

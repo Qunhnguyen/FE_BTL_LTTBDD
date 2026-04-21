@@ -6,7 +6,6 @@ import '../../../../core/router/app_router.dart';
 import '../../../auth/providers/auth_provider.dart';
 import '../models/question.dart';
 import '../providers/quiz_provider.dart';
-import '../providers/quiz_result_provider.dart';
 
 class QuizScreen extends ConsumerStatefulWidget {
   const QuizScreen({super.key, required this.contestId});
@@ -18,8 +17,6 @@ class QuizScreen extends ConsumerStatefulWidget {
 }
 
 class _QuizScreenState extends ConsumerState<QuizScreen> {
-  bool _navigatedToResult = false;
-
   @override
   void initState() {
     super.initState();
@@ -28,17 +25,11 @@ class _QuizScreenState extends ConsumerState<QuizScreen> {
 
   void _initQuiz() {
     Future.microtask(() async {
-      if (!mounted) {
-        return;
-      }
-
+      if (!mounted) return;
       final user = await ref.read(authProvider.notifier).ensureCurrentUser();
-      if (!mounted) {
-        return;
-      }
-
+      if (!mounted) return;
       if (user != null) {
-        ref.read(quizProvider.notifier).startQuiz(widget.contestId, user.id);
+        ref.read(quizProvider.notifier).startQuiz(widget.contestId);
       } else {
         context.go('/');
       }
@@ -47,40 +38,30 @@ class _QuizScreenState extends ConsumerState<QuizScreen> {
 
   @override
   Widget build(BuildContext context) {
-    ref.listen(quizResultProvider, (previous, next) {
-      if (next == null || _navigatedToResult || !mounted) {
-        return;
-      }
-
-      _navigatedToResult = true;
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (!mounted) {
-          return;
-        }
-
+    ref.listen(quizProvider, (previous, next) {
+      if (next.isFinished && previous?.isFinished != true) {
         context.pushReplacementNamed(AppRouteNames.studentResult);
-      });
+      }
     });
 
     final quizState = ref.watch(quizProvider);
     final currentQuestion = ref.watch(currentQuestionProvider);
     final progress = ref.watch(quizProgressProvider);
+    
     final isLastQuestion = currentQuestion != null &&
         quizState.currentQuestionIndex == quizState.questions.length - 1;
 
     return PopScope(
       canPop: false,
       onPopInvokedWithResult: (didPop, result) async {
-        if (didPop) {
-          return;
-        }
-
+        if (didPop) return;
         final shouldPop = await _handleWillPop();
         if (shouldPop && context.mounted) {
           context.pop();
         }
       },
       child: Scaffold(
+        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
         appBar: AppBar(
           leading: IconButton(
             icon: const Icon(Icons.close),
@@ -91,9 +72,9 @@ class _QuizScreenState extends ConsumerState<QuizScreen> {
               }
             },
           ),
-          title: const Text(
-            'Bài thi trực tuyến',
-            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+          title: Text(
+            quizState.submission?.quizName ?? 'Bài thi trực tuyến',
+            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
           ),
           centerTitle: true,
         ),
@@ -104,6 +85,7 @@ class _QuizScreenState extends ConsumerState<QuizScreen> {
                 isSubmitting: quizState.isSubmitting,
                 onNext: () => ref.read(quizProvider.notifier).nextQuestion(),
                 onFinish: _submitQuiz,
+                onPowerUp: (type) => ref.read(quizProvider.notifier).usePowerUp(type),
               )
             : null,
       ),
@@ -117,29 +99,19 @@ class _QuizScreenState extends ConsumerState<QuizScreen> {
 
   Future<void> _submitQuiz() async {
     final shouldFinish = await _showFinishConfirmation(context);
-    if (shouldFinish != true || !mounted) {
-      return;
+    if (shouldFinish != true || !mounted) return;
+    try {
+      await ref.read(quizProvider.notifier).finishQuiz();
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Lỗi: $e'), backgroundColor: Colors.red));
+      }
     }
-
-    await ref.read(quizProvider.notifier).finishQuiz();
   }
 
-  Widget _buildBody(
-    QuizState quizState,
-    Question? currentQuestion,
-    double progress,
-  ) {
+  Widget _buildBody(QuizState quizState, Question? currentQuestion, double progress) {
     if (quizState.isLoading) {
-      return const Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            CircularProgressIndicator(),
-            SizedBox(height: 16),
-            Text('Đang tải câu hỏi...'),
-          ],
-        ),
-      );
+      return const Center(child: CircularProgressIndicator());
     }
 
     if (quizState.errorMessage != null) {
@@ -151,39 +123,16 @@ class _QuizScreenState extends ConsumerState<QuizScreen> {
             children: [
               const Icon(Icons.error_outline, size: 64, color: Colors.red),
               const SizedBox(height: 16),
-              Text(
-                quizState.errorMessage ?? 'Đã có lỗi xảy ra',
-                textAlign: TextAlign.center,
-                style: const TextStyle(fontWeight: FontWeight.bold),
-              ),
+              Text(quizState.errorMessage!, textAlign: TextAlign.center, style: const TextStyle(fontWeight: FontWeight.bold)),
               const SizedBox(height: 24),
-              ElevatedButton(
-                onPressed: () => context.go('/student/home'),
-                child: const Text('Quay lại trang chủ'),
-              ),
+              ElevatedButton(onPressed: () => context.go('/student/home'), child: const Text('Quay lại')),
             ],
           ),
         ),
       );
     }
 
-    if (currentQuestion == null) {
-      return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const Icon(Icons.quiz_outlined, size: 64, color: Colors.grey),
-            const SizedBox(height: 16),
-            const Text('Không tìm thấy dữ liệu câu hỏi.'),
-            const SizedBox(height: 24),
-            OutlinedButton(
-              onPressed: () => context.go('/student/home'),
-              child: const Text('Quay lại'),
-            ),
-          ],
-        ),
-      );
-    }
+    if (currentQuestion == null) return const SizedBox.shrink();
 
     return Column(
       children: [
@@ -195,26 +144,19 @@ class _QuizScreenState extends ConsumerState<QuizScreen> {
                 const SizedBox(height: 16),
                 _TimerSection(remainingSeconds: quizState.remainingSeconds),
                 const SizedBox(height: 24),
-                _ProgressBar(
-                  progress: progress,
-                  currentIndex: quizState.currentQuestionIndex + 1,
-                  total: quizState.questions.length,
-                ),
+                _ProgressBar(progress: progress, currentIndex: quizState.currentQuestionIndex + 1, total: quizState.questions.length),
                 const SizedBox(height: 24),
-                _QuestionCard(
-                  question: currentQuestion,
-                  index: quizState.currentQuestionIndex + 1,
-                ),
+                _QuestionCard(question: currentQuestion, index: quizState.currentQuestionIndex + 1),
                 const SizedBox(height: 24),
                 _AnswersList(
                   question: currentQuestion,
-                  selectedAnswerId:
-                      quizState.selectedAnswers[currentQuestion.id],
-                  onSelect: (id) => ref
-                      .read(quizProvider.notifier)
-                      .selectAnswer(currentQuestion.id, id),
+                  selectedAnswerKey: quizState.selectedAnswers[currentQuestion.id],
+                  isCorrect: quizState.isCorrectMap[currentQuestion.id],
+                  correctKey: quizState.correctOptionMap[currentQuestion.id],
+                  disabledKeys: quizState.disabledOptions[currentQuestion.id] ?? [],
+                  onSelect: (key) => ref.read(quizProvider.notifier).selectAnswer(currentQuestion.id, key),
                 ),
-                const SizedBox(height: 100),
+                const SizedBox(height: 120),
               ],
             ),
           ),
@@ -228,22 +170,9 @@ class _QuizScreenState extends ConsumerState<QuizScreen> {
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Thoát bài thi?'),
-        content: const Text(
-          'Tiến độ của bạn đã được lưu lại. Bạn có chắc chắn muốn thoát không?',
-        ),
         actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('Tiếp tục thi'),
-          ),
-          ElevatedButton(
-            onPressed: () => Navigator.pop(context, true),
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-            child: const Text(
-              'Thoát',
-              style: TextStyle(color: Colors.white),
-            ),
-          ),
+          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Tiếp tục')),
+          ElevatedButton(onPressed: () => Navigator.pop(context, true), child: const Text('Thoát')),
         ],
       ),
     );
@@ -254,18 +183,9 @@ class _QuizScreenState extends ConsumerState<QuizScreen> {
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Nộp bài thi?'),
-        content: const Text(
-          'Bạn có muốn kết thúc bài thi và xem kết quả ngay bây giờ không?',
-        ),
         actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('Tiếp tục làm'),
-          ),
-          ElevatedButton(
-            onPressed: () => Navigator.pop(context, true),
-            child: const Text('Nộp bài'),
-          ),
+          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Tiếp tục')),
+          ElevatedButton(onPressed: () => Navigator.pop(context, true), child: const Text('Nộp bài')),
         ],
       ),
     );
@@ -273,53 +193,30 @@ class _QuizScreenState extends ConsumerState<QuizScreen> {
 }
 
 class _ProgressBar extends StatelessWidget {
-  const _ProgressBar({
-    required this.progress,
-    required this.currentIndex,
-    required this.total,
-  });
-
+  const _ProgressBar({required this.progress, required this.currentIndex, required this.total});
   final double progress;
   final int currentIndex;
   final int total;
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     return Column(
       children: [
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            const Text(
-              'Tiến độ',
-              style: TextStyle(color: Colors.grey, fontSize: 12),
-            ),
-            Text(
-              '$currentIndex/$total',
-              style: const TextStyle(fontWeight: FontWeight.bold),
-            ),
+            Text('Câu hỏi $currentIndex/$total', style: const TextStyle(fontWeight: FontWeight.bold)),
           ],
         ),
         const SizedBox(height: 8),
-        LinearProgressIndicator(
-          value: progress,
-          backgroundColor: Colors.grey[200],
-          valueColor: AlwaysStoppedAnimation<Color>(theme.colorScheme.primary),
-          minHeight: 8,
-          borderRadius: BorderRadius.circular(4),
-        ),
+        LinearProgressIndicator(value: progress, minHeight: 8, borderRadius: BorderRadius.circular(4)),
       ],
     );
   }
 }
 
 class _QuestionCard extends StatelessWidget {
-  const _QuestionCard({
-    required this.question,
-    required this.index,
-  });
-
+  const _QuestionCard({required this.question, required this.index});
   final Question question;
   final int index;
 
@@ -328,44 +225,13 @@ class _QuestionCard extends StatelessWidget {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: Theme.of(context).cardColor,
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.05),
-            blurRadius: 10,
-          ),
-        ],
-        border: Border.all(color: Colors.grey.withValues(alpha: 0.1)),
-      ),
+      decoration: BoxDecoration(color: Theme.of(context).cardColor, borderRadius: BorderRadius.circular(20)),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-            decoration: BoxDecoration(
-              color: Colors.blue.withValues(alpha: 0.1),
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: Text(
-              'CÂU $index',
-              style: const TextStyle(
-                color: Colors.blue,
-                fontWeight: FontWeight.bold,
-                fontSize: 12,
-              ),
-            ),
-          ),
+          Text('CÂU $index', style: const TextStyle(color: Colors.blue, fontWeight: FontWeight.bold)),
           const SizedBox(height: 16),
-          Text(
-            question.content,
-            style: const TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-              height: 1.5,
-            ),
-          ),
+          Text(question.content, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
         ],
       ),
     );
@@ -374,67 +240,74 @@ class _QuestionCard extends StatelessWidget {
 
 class _AnswersList extends StatelessWidget {
   const _AnswersList({
-    required this.question,
-    required this.selectedAnswerId,
-    required this.onSelect,
+    required this.question, 
+    required this.selectedAnswerKey, 
+    this.isCorrect, 
+    this.correctKey,
+    required this.onSelect, 
+    this.disabledKeys = const []
   });
-
+  
   final Question question;
-  final String? selectedAnswerId;
+  final String? selectedAnswerKey;
+  final bool? isCorrect;
+  final String? correctKey;
   final void Function(String) onSelect;
+  final List<String> disabledKeys;
 
   @override
   Widget build(BuildContext context) {
     return Column(
-      children: question.answers.map((answer) {
-        final isSelected = selectedAnswerId == answer.id;
+      children: question.options.map((option) {
+        final isSelected = selectedAnswerKey == option.key;
+        final isDisabled = disabledKeys.contains(option.key);
+        
+        // LOGIC MÀU SẮC REALTIME
+        Color borderColor = Colors.grey.shade300;
+        Color? bgColor;
+        
+        if (isSelected) {
+          if (isCorrect == true) {
+            borderColor = Colors.green;
+            bgColor = Colors.green.withOpacity(0.1);
+          } else if (isCorrect == false) {
+            borderColor = Colors.red;
+            bgColor = Colors.red.withOpacity(0.1);
+          } else {
+            borderColor = Colors.blue;
+            bgColor = Colors.blue.withOpacity(0.1);
+          }
+        } else if (isCorrect == false && option.key == correctKey) {
+          // Hiển thị đáp án đúng nếu người dùng chọn sai
+          borderColor = Colors.green.withOpacity(0.5);
+        }
+
         return Padding(
           padding: const EdgeInsets.only(bottom: 12),
           child: InkWell(
-            onTap: () => onSelect(answer.id),
-            borderRadius: BorderRadius.circular(16),
-            child: Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: isSelected
-                    ? Colors.blue.withValues(alpha: 0.1)
-                    : Theme.of(context).cardColor,
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(
-                  color: isSelected
-                      ? Colors.blue
-                      : (Colors.grey[200] ?? Colors.grey),
-                  width: 2,
+            onTap: (isDisabled || isCorrect != null) ? null : () => onSelect(option.key),
+            child: Opacity(
+              opacity: isDisabled ? 0.3 : 1.0,
+              child: Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: bgColor ?? Theme.of(context).cardColor,
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: borderColor, width: 2),
                 ),
-              ),
-              child: Row(
-                children: [
-                  CircleAvatar(
-                    radius: 15,
-                    backgroundColor: isSelected
-                        ? Colors.blue
-                        : (Colors.grey[100] ?? Colors.grey),
-                    child: Text(
-                      answer.label,
-                      style: TextStyle(
-                        color: isSelected ? Colors.white : Colors.black,
-                        fontSize: 12,
-                      ),
+                child: Row(
+                  children: [
+                    CircleAvatar(
+                      radius: 15,
+                      backgroundColor: isSelected ? borderColor : Colors.grey.shade200,
+                      child: Text(option.key, style: TextStyle(color: isSelected ? Colors.white : Colors.black, fontSize: 12)),
                     ),
-                  ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: Text(
-                      answer.text,
-                      style: TextStyle(
-                        fontWeight:
-                            isSelected ? FontWeight.bold : FontWeight.normal,
-                      ),
-                    ),
-                  ),
-                  if (isSelected)
-                    const Icon(Icons.check_circle, color: Colors.blue),
-                ],
+                    const SizedBox(width: 16),
+                    Expanded(child: Text(option.content, style: TextStyle(fontWeight: isSelected ? FontWeight.bold : FontWeight.normal))),
+                    if (isSelected && isCorrect == true) const Icon(Icons.check_circle, color: Colors.green),
+                    if (isSelected && isCorrect == false) const Icon(Icons.cancel, color: Colors.red),
+                  ],
+                ),
               ),
             ),
           ),
@@ -446,7 +319,6 @@ class _AnswersList extends StatelessWidget {
 
 class _TimerSection extends StatelessWidget {
   const _TimerSection({required this.remainingSeconds});
-
   final int remainingSeconds;
 
   @override
@@ -455,23 +327,13 @@ class _TimerSection extends StatelessWidget {
     final seconds = remainingSeconds % 60;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-      decoration: BoxDecoration(
-        color: Colors.orange.withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(30),
-      ),
+      decoration: BoxDecoration(color: Colors.orange.withOpacity(0.1), borderRadius: BorderRadius.circular(30)),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
           const Icon(Icons.timer_outlined, color: Colors.orange, size: 20),
           const SizedBox(width: 8),
-          Text(
-            '${minutes.toString().padLeft(2, '0')}:${seconds.toString().padLeft(2, '0')}',
-            style: const TextStyle(
-              color: Colors.orange,
-              fontWeight: FontWeight.bold,
-              fontSize: 18,
-            ),
-          ),
+          Text('${minutes.toString().padLeft(2, '0')}:${seconds.toString().padLeft(2, '0')}', style: const TextStyle(color: Colors.orange, fontWeight: FontWeight.bold, fontSize: 18)),
         ],
       ),
     );
@@ -479,73 +341,39 @@ class _TimerSection extends StatelessWidget {
 }
 
 class _QuizBottomBar extends StatelessWidget {
-  const _QuizBottomBar({
-    required this.isLastQuestion,
-    required this.isSubmitting,
-    required this.onNext,
-    required this.onFinish,
-  });
-
+  const _QuizBottomBar({required this.isLastQuestion, required this.isSubmitting, required this.onNext, required this.onFinish, required this.onPowerUp});
   final bool isLastQuestion;
   final bool isSubmitting;
   final VoidCallback onNext;
   final Future<void> Function() onFinish;
+  final void Function(String) onPowerUp;
 
   @override
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.fromLTRB(16, 12, 16, 32),
-      decoration: BoxDecoration(
-        color: Theme.of(context).cardColor,
-        border: Border(
-          top: BorderSide(color: Colors.grey[200] ?? Colors.grey),
-        ),
-      ),
+      decoration: BoxDecoration(color: Theme.of(context).cardColor, border: const Border(top: BorderSide(color: Colors.black12))),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              _PowerUpButton(
-                icon: Icons.hdr_strong,
-                label: '50/50',
-                color: Colors.purple,
-                onTap: () {},
-              ),
-              _PowerUpButton(
-                icon: Icons.skip_next,
-                label: 'Bỏ qua',
-                color: Colors.amber,
-                onTap: onNext,
-              ),
-              _PowerUpButton(
-                icon: Icons.groups,
-                label: 'Khán giả',
-                color: Colors.blue,
-                onTap: () {},
-              ),
+              _PowerUpButton(icon: Icons.hdr_strong, label: '50/50', color: Colors.purple, onTap: () => onPowerUp('FIFTY_FIFTY')),
+              _PowerUpButton(icon: Icons.skip_next, label: 'Bỏ qua', color: Colors.amber, onTap: () => onPowerUp('SKIP')),
+              _PowerUpButton(icon: Icons.groups, label: 'Khán giả', color: Colors.blue, onTap: () => onPowerUp('ASK_AUDIENCE')),
             ],
           ),
           const SizedBox(height: 12),
           SizedBox(
             width: double.infinity,
             child: ElevatedButton(
-              onPressed: isSubmitting
-                  ? null
-                  : () async {
-                      if (isLastQuestion) {
-                        await onFinish();
-                      } else {
-                        onNext();
-                      }
-                    },
+              onPressed: isSubmitting ? null : () async {
+                if (isLastQuestion) await onFinish();
+                else onNext();
+              },
               child: isSubmitting
-                  ? const SizedBox(
-                      width: 18,
-                      height: 18,
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    )
+                  ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))
                   : Text(isLastQuestion ? 'Nộp bài' : 'Câu tiếp'),
             ),
           ),
@@ -556,13 +384,7 @@ class _QuizBottomBar extends StatelessWidget {
 }
 
 class _PowerUpButton extends StatelessWidget {
-  const _PowerUpButton({
-    required this.icon,
-    required this.label,
-    required this.color,
-    required this.onTap,
-  });
-
+  const _PowerUpButton({required this.icon, required this.label, required this.color, required this.onTap});
   final IconData icon;
   final String label;
   final Color color;
@@ -577,10 +399,7 @@ class _PowerUpButton extends StatelessWidget {
         children: [
           Icon(icon, color: color),
           const SizedBox(height: 4),
-          Text(
-            label,
-            style: const TextStyle(fontSize: 10, color: Colors.grey),
-          ),
+          Text(label, style: const TextStyle(fontSize: 10, color: Colors.grey)),
         ],
       ),
     );

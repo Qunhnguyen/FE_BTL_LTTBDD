@@ -23,6 +23,11 @@ final dioProvider = Provider<Dio>((ref) {
   dio.interceptors.add(
     InterceptorsWrapper(
       onRequest: (options, handler) async {
+        // KHÔNG gửi token nếu là API đăng nhập
+        if (options.path.contains('/api/auth/login')) {
+          return handler.next(options);
+        }
+
         const storage = FlutterSecureStorage();
         final token = await storage.read(key: 'auth_token');
         if (token != null && token.isNotEmpty) {
@@ -115,7 +120,6 @@ class ApiClient {
     }
   }
 
-  // Bổ sung phương thức PATCH cho các API cập nhật từng phần (như Notification)
   Future<Response<T>> patch<T>(
     String path, {
     dynamic data,

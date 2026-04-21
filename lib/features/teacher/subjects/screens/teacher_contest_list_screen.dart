@@ -2,12 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../core/router/app_router.dart';
+import '../../../auth/providers/auth_provider.dart';
 import '../models/subject.dart';
 import '../../../../features/student/home/models/contest.dart';
 import '../../../../features/student/home/repositories/contest_repository.dart';
 import '../../../../features/teacher/questions/providers/question_management_provider.dart';
 import '../repositories/classroom_repository.dart';
 import 'teacher_classroom_list_screen.dart';
+import 'quiz_management_screen.dart';
 
 final contestsBySubjectProvider = FutureProvider.family<List<Contest>, String>((ref, subjectId) async {
   return ref.watch(contestRepositoryProvider).getContestsBySubject(subjectId);
@@ -19,14 +21,37 @@ class TeacherContestListScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final userRole = ref.watch(authProvider).user?.role;
+    final isAdmin = userRole == 'ADMIN';
+
     return DefaultTabController(
-      length: 2,
+      length: 3,
       child: Scaffold(
         appBar: AppBar(
           title: Text(subject.name),
+          actions: [
+            PopupMenuButton<String>(
+              onSelected: (value) {
+                final routeName = isAdmin ? _getAdminRoute(value) : _getTeacherRoute(value);
+                context.pushNamed(routeName, pathParameters: {'subjectId': subject.id});
+              },
+              itemBuilder: (context) => [
+                const PopupMenuItem(
+                  value: 'knowledge',
+                  child: Row(children: [Icon(Icons.auto_stories, color: Colors.blue), SizedBox(width: 8), Text('Quản lý Tri thức (RAG)')]),
+                ),
+                const PopupMenuItem(
+                  value: 'ai_builder',
+                  child: Row(children: [Icon(Icons.psychology, color: Colors.purple), SizedBox(width: 8), Text('Tạo đề thi bằng AI')]),
+                ),
+              ],
+              icon: const Icon(Icons.auto_fix_high),
+            ),
+          ],
           bottom: const TabBar(
             tabs: [
               Tab(icon: Icon(Icons.assignment_outlined), text: 'Cuộc thi'),
+              Tab(icon: Icon(Icons.play_lesson_outlined), text: 'Quiz'),
               Tab(icon: Icon(Icons.groups_outlined), text: 'Lớp học'),
             ],
           ),
@@ -34,11 +59,22 @@ class TeacherContestListScreen extends ConsumerWidget {
         body: TabBarView(
           children: [
             _ContestsTab(subject: subject),
+            QuizManagementScreen(subject: subject),
             TeacherClassroomListScreen(subject: subject),
           ],
         ),
       ),
     );
+  }
+
+  String _getAdminRoute(String value) {
+    if (value == 'knowledge') return AppRouteNames.adminKnowledge;
+    return AppRouteNames.adminAiBuilder;
+  }
+
+  String _getTeacherRoute(String value) {
+    if (value == 'knowledge') return AppRouteNames.teacherKnowledge;
+    return AppRouteNames.teacherAiBuilder;
   }
 }
 
@@ -49,20 +85,13 @@ class _ContestsTab extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final contestsAsync = ref.watch(contestsBySubjectProvider(subject.id));
+    final userRole = ref.watch(authProvider).user?.role;
+    final isAdmin = userRole == 'ADMIN';
 
     return contestsAsync.when(
       data: (contests) => Scaffold(
         body: contests.isEmpty
-            ? Center(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(Icons.event_note_outlined, size: 64, color: Colors.grey[300]),
-                    const SizedBox(height: 16),
-                    const Text('Chưa có cuộc thi nào.'),
-                  ],
-                ),
-              )
+            ? const Center(child: Text('Chưa có cuộc thi nào.'))
             : ListView.builder(
                 padding: const EdgeInsets.all(16),
                 itemCount: contests.length,
@@ -76,20 +105,22 @@ class _ContestsTab extends ConsumerWidget {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text('${contest.durationMinutes} phút • ${contest.description}'),
-                          if (contest.classroomIds.isNotEmpty)
-                            Padding(
-                              padding: const EdgeInsets.only(top: 4),
-                              child: Text('Đã gán cho ${contest.classroomIds.length} lớp', 
-                                style: const TextStyle(color: Colors.blue, fontSize: 12, fontWeight: FontWeight.bold)),
-                            ),
                           const SizedBox(height: 8),
-                          ElevatedButton.icon(
-                            onPressed: () {
-                              ref.read(activeContestIdProvider.notifier).state = contest.id;
-                              context.goNamed(AppRouteNames.teacherQuestions);
-                            },
-                            icon: const Icon(Icons.quiz_outlined, size: 18),
-                            label: const Text('Quản lý Câu hỏi'),
+                          Wrap(
+                            spacing: 8,
+                            children: [
+
+                              OutlinedButton.icon(
+                                onPressed: () {
+                                  context.pushNamed(
+                                    AppRouteNames.teacherContestAnalytics,
+                                    pathParameters: {'contestId': contest.id},
+                                  );
+                                },
+                                icon: const Icon(Icons.analytics_outlined, size: 18),
+                                label: const Text('Thống kê'),
+                              ),
+                            ],
                           ),
                         ],
                       ),
@@ -101,10 +132,41 @@ class _ContestsTab extends ConsumerWidget {
                   );
                 },
               ),
-        floatingActionButton: FloatingActionButton.extended(
-          onPressed: () => _showAddContestDialog(context, ref, subject.id),
-          label: const Text('Tạo cuộc thi'),
-          icon: const Icon(Icons.add),
+        floatingActionButton: Column(
+          mainAxisAlignment: MainAxisAlignment.end,
+          crossAxisAlignment: CrossAxisAlignment.end,
+          children: [
+             FloatingActionButton.extended(
+              heroTag: 'quiz_fab',
+              onPressed: () => context.pushNamed(
+                isAdmin ? AppRouteNames.adminCreateQuiz : AppRouteNames.teacherCreateQuiz,
+                pathParameters: {'subjectId': subject.id},
+              ),
+              label: Text(isAdmin ? 'Tạo Quiz Public' : 'Tạo Quiz lớp'),
+              icon: const Icon(Icons.add_task),
+              backgroundColor: Colors.green,
+              foregroundColor: Colors.white,
+            ),
+            const SizedBox(height: 12),
+            FloatingActionButton.extended(
+              heroTag: 'ai_fab',
+              onPressed: () => context.pushNamed(
+                isAdmin ? AppRouteNames.adminAiBuilder : AppRouteNames.teacherAiBuilder,
+                pathParameters: {'subjectId': subject.id},
+              ),
+              label: const Text('Tạo đề AI'),
+              icon: const Icon(Icons.psychology),
+              backgroundColor: Colors.purple,
+              foregroundColor: Colors.white,
+            ),
+            const SizedBox(height: 12),
+            FloatingActionButton.extended(
+              heroTag: 'standard_fab',
+              onPressed: () => _showAddContestDialog(context, ref, subject.id),
+              label: const Text('Tạo bộ đề gốc'),
+              icon: const Icon(Icons.add),
+            ),
+          ],
         ),
       ),
       loading: () => const Center(child: CircularProgressIndicator()),
@@ -116,7 +178,7 @@ class _ContestsTab extends ConsumerWidget {
     final ok = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Xác nhận xóa cuộc thi?'),
+        title: const Text('Xác nhận xóa?'),
         actions: [
           TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Hủy')),
           TextButton(onPressed: () => Navigator.pop(context, true), child: const Text('Xóa', style: TextStyle(color: Colors.red))),
@@ -131,72 +193,29 @@ class _ContestsTab extends ConsumerWidget {
 
   void _showAddContestDialog(BuildContext context, WidgetRef ref, String subjectId) async {
     final titleController = TextEditingController();
-    final descController = TextEditingController();
-    final durationController = TextEditingController(text: '45');
-    
-    // Lấy danh sách lớp thật từ BE
-    final classrooms = await ref.read(classroomRepositoryProvider).getClassroomsBySubject(subjectId);
-    List<String> selectedClassIds = [];
-
-    if (!context.mounted) return;
-
     showDialog(
       context: context,
-      builder: (context) => StatefulBuilder(
-        builder: (context, setState) => AlertDialog(
-          title: const Text('Tạo cuộc thi mới'),
-          content: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                TextField(controller: titleController, decoration: const InputDecoration(labelText: 'Tên cuộc thi')),
-                TextField(
-                  controller: durationController,
-                  decoration: const InputDecoration(labelText: 'Thời gian (phút)'),
-                  keyboardType: TextInputType.number,
-                ),
-                const SizedBox(height: 16),
-                const Align(alignment: Alignment.centerLeft, child: Text('Gán cho lớp học (Bắt buộc):', style: TextStyle(fontWeight: FontWeight.bold))),
-                const Divider(),
-                if (classrooms.isEmpty)
-                  const Text('Chưa có lớp học nào. Hãy tạo lớp ở tab Lớp học trước.', style: TextStyle(color: Colors.red, fontSize: 12))
-                else
-                  ...classrooms.map((cls) => CheckboxListTile(
-                    title: Text(cls.name),
-                    value: selectedClassIds.contains(cls.id),
-                    onChanged: (val) {
-                      setState(() {
-                        if (val == true) selectedClassIds.add(cls.id);
-                        else selectedClassIds.remove(cls.id);
-                      });
-                    },
-                    dense: true,
-                  )),
-              ],
-            ),
+      builder: (context) => AlertDialog(
+        title: const Text('Tạo bộ đề mới (Contest)'),
+        content: TextField(controller: titleController, decoration: const InputDecoration(labelText: 'Tên bộ đề')),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Hủy')),
+          ElevatedButton(
+            onPressed: () async {
+              if (titleController.text.isNotEmpty) {
+                await ref.read(contestRepositoryProvider).createContest(subjectId, {
+                  'name': titleController.text,
+                  'durationMinutes': 45,
+                  'status': 'UPCOMING',
+                  'classroomIds': [],
+                });
+                ref.invalidate(contestsBySubjectProvider(subjectId));
+                if (context.mounted) Navigator.pop(context);
+              }
+            },
+            child: const Text('Tạo'),
           ),
-          actions: [
-            TextButton(onPressed: () => Navigator.pop(context), child: const Text('Hủy')),
-            ElevatedButton(
-              onPressed: () async {
-                if (titleController.text.isNotEmpty && selectedClassIds.isNotEmpty) {
-                  await ref.read(contestRepositoryProvider).createContest(subjectId, {
-                    'name': titleController.text,
-                    'description': descController.text,
-                    'durationMinutes': int.tryParse(durationController.text) ?? 45,
-                    'status': 'UPCOMING',
-                    'classroomIds': selectedClassIds,
-                  });
-                  ref.invalidate(contestsBySubjectProvider(subjectId));
-                  if (context.mounted) Navigator.pop(context);
-                } else {
-                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Vui lòng nhập tên và chọn ít nhất 1 lớp')));
-                }
-              },
-              child: const Text('Tạo'),
-            ),
-          ],
-        ),
+        ],
       ),
     );
   }
