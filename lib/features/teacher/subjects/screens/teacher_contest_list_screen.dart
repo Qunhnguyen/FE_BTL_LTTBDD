@@ -109,7 +109,23 @@ class _ContestsTab extends ConsumerWidget {
                           Wrap(
                             spacing: 8,
                             children: [
-
+                              ElevatedButton.icon(
+                                onPressed: () {
+                                  // Set active contest ID before navigating
+                                  ref.read(activeContestIdProvider.notifier).state = contest.id;
+                                  context.pushNamed(
+                                    isAdmin ? AppRouteNames.adminQuestions : AppRouteNames.teacherQuestions,
+                                    pathParameters: {'subjectId': subject.id},
+                                  );
+                                },
+                                icon: const Icon(Icons.quiz_outlined, size: 18),
+                                label: const Text('Câu hỏi'),
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: Colors.blue.shade50,
+                                  foregroundColor: Colors.blue.shade700,
+                                  elevation: 0,
+                                ),
+                              ),
                               OutlinedButton.icon(
                                 onPressed: () {
                                   context.pushNamed(
