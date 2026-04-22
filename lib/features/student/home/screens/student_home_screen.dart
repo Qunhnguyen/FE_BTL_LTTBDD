@@ -3,8 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../core/router/app_router.dart';
 import '../../../auth/providers/auth_provider.dart';
-import '../../../teacher/subjects/providers/subject_providers.dart';
 import '../../notifications/providers/notification_provider.dart';
+import '../providers/home_providers.dart';
 
 class StudentHomeScreen extends ConsumerWidget {
   const StudentHomeScreen({super.key});
@@ -13,14 +13,15 @@ class StudentHomeScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
-    final subjectsAsync = ref.watch(subjectsProvider);
+    
+    // SỬA: Dùng filteredStudentSubjectsProvider thay vì subjectsProvider gốc
+    final subjectsAsync = ref.watch(filteredStudentSubjectsProvider);
     final authState = ref.watch(authProvider);
     
     final user = authState.user;
     final userName = user?.name ?? 'Người dùng';
     final avatarUrl = user?.avatarUrl;
 
-    // LẤY TRẠNG THÁI THÔNG BÁO ĐỂ HIỂN THỊ SỐ (BADGE)
     final notificationState = ref.watch(notificationProvider);
 
     return Scaffold(
@@ -58,7 +59,6 @@ class StudentHomeScreen extends ConsumerWidget {
                     ),
                   ),
                   
-                  // ICON CHUÔNG CÓ HIỂN THỊ SỐ THÔNG BÁO
                   IconButton(
                     onPressed: () => context.pushNamed(AppRouteNames.studentNotifications),
                     icon: Stack(
@@ -93,6 +93,8 @@ class StudentHomeScreen extends ConsumerWidget {
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 20),
               child: TextField(
+                // SỬA: Thêm logic cập nhật Search Query
+                onChanged: (value) => ref.read(subjectSearchQueryProvider.notifier).state = value,
                 decoration: InputDecoration(
                   hintText: 'Tìm kiếm môn học...',
                   prefixIcon: const Icon(Icons.search),
@@ -140,38 +142,46 @@ class StudentHomeScreen extends ConsumerWidget {
           ),
 
           subjectsAsync.when(
-            data: (subjects) => SliverPadding(
-              padding: const EdgeInsets.symmetric(horizontal: 20),
-              sliver: SliverList(
-                delegate: SliverChildBuilderDelegate(
-                  (context, index) {
-                    final subject = subjects[index];
-                    return Card(
-                      margin: const EdgeInsets.only(bottom: 12),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                      child: ListTile(
-                        leading: Container(
-                          padding: const EdgeInsets.all(8),
-                          decoration: BoxDecoration(color: theme.colorScheme.primary.withOpacity(0.1), borderRadius: BorderRadius.circular(10)),
-                          child: Icon(Icons.book, color: theme.colorScheme.primary),
+            data: (subjects) {
+              if (subjects.isEmpty) {
+                return const SliverFillRemaining(
+                  hasScrollBody: false,
+                  child: Center(child: Text('Không tìm thấy môn học nào')),
+                );
+              }
+              return SliverPadding(
+                padding: const EdgeInsets.symmetric(horizontal: 20),
+                sliver: SliverList(
+                  delegate: SliverChildBuilderDelegate(
+                    (context, index) {
+                      final subject = subjects[index];
+                      return Card(
+                        margin: const EdgeInsets.only(bottom: 12),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                        child: ListTile(
+                          leading: Container(
+                            padding: const EdgeInsets.all(8),
+                            decoration: BoxDecoration(color: theme.colorScheme.primary.withOpacity(0.1), borderRadius: BorderRadius.circular(10)),
+                            child: Icon(Icons.book, color: theme.colorScheme.primary),
+                          ),
+                          title: Text(subject.name, style: const TextStyle(fontWeight: FontWeight.bold)),
+                          subtitle: Text(subject.description ?? 'Không có mô tả', maxLines: 1, overflow: TextOverflow.ellipsis),
+                          trailing: const Icon(Icons.chevron_right_rounded),
+                          onTap: () {
+                            context.pushNamed(
+                              AppRouteNames.studentQuizCatalog,
+                              pathParameters: {'subjectId': subject.id},
+                              queryParameters: {'name': subject.name},
+                            );
+                          },
                         ),
-                        title: Text(subject.name, style: const TextStyle(fontWeight: FontWeight.bold)),
-                        subtitle: Text(subject.description ?? 'Không có mô tả', maxLines: 1, overflow: TextOverflow.ellipsis),
-                        trailing: const Icon(Icons.chevron_right_rounded),
-                        onTap: () {
-                          context.pushNamed(
-                            AppRouteNames.studentQuizCatalog,
-                            pathParameters: {'subjectId': subject.id},
-                            queryParameters: {'name': subject.name},
-                          );
-                        },
-                      ),
-                    );
-                  },
-                  childCount: subjects.length,
+                      );
+                    },
+                    childCount: subjects.length,
+                  ),
                 ),
-              ),
-            ),
+              );
+            },
             loading: () => const SliverFillRemaining(child: Center(child: CircularProgressIndicator())),
             error: (err, stack) => SliverFillRemaining(child: Center(child: Text('Lỗi: $err'))),
           ),

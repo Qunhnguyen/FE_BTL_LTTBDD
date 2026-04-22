@@ -11,13 +11,14 @@ class ClassroomRepositoryImpl implements ClassroomRepository {
   @override
   Future<List<ClassroomResponse>> getTeacherClassrooms(String subjectId) async {
     final response = await _apiClient.get('/api/admin/subjects/$subjectId/classrooms');
-    return (response.data as List).map((e) => ClassroomResponse.fromJson(e)).toList();
+    if (response.data == null) return [];
+    return (response.data as List).map((e) => ClassroomResponse.fromJson(Map<String, dynamic>.from(e))).toList();
   }
 
   @override
   Future<ClassroomResponse> getClassroomById(String subjectId, String classroomId) async {
     final response = await _apiClient.get('/api/admin/subjects/$subjectId/classrooms/$classroomId');
-    return ClassroomResponse.fromJson(response.data);
+    return ClassroomResponse.fromJson(Map<String, dynamic>.from(response.data));
   }
 
   @override
@@ -26,7 +27,7 @@ class ClassroomRepositoryImpl implements ClassroomRepository {
       '/api/admin/subjects/$subjectId/classrooms',
       data: {'name': name, 'studentIds': studentIds},
     );
-    return ClassroomResponse.fromJson(response.data);
+    return ClassroomResponse.fromJson(Map<String, dynamic>.from(response.data));
   }
 
   @override
@@ -38,7 +39,7 @@ class ClassroomRepositoryImpl implements ClassroomRepository {
         if (studentIds != null) 'studentIds': studentIds,
       },
     );
-    return ClassroomResponse.fromJson(response.data);
+    return ClassroomResponse.fromJson(Map<String, dynamic>.from(response.data));
   }
 
   @override
@@ -47,7 +48,7 @@ class ClassroomRepositoryImpl implements ClassroomRepository {
       '/api/admin/subjects/$subjectId/classrooms/$classroomId/students',
       data: {'studentIds': studentIds},
     );
-    return ClassroomResponse.fromJson(response.data);
+    return ClassroomResponse.fromJson(Map<String, dynamic>.from(response.data));
   }
 
   @override
@@ -55,7 +56,7 @@ class ClassroomRepositoryImpl implements ClassroomRepository {
     final response = await _apiClient.delete(
       '/api/admin/subjects/$subjectId/classrooms/$classroomId/students/$studentId',
     );
-    return ClassroomResponse.fromJson(response.data);
+    return ClassroomResponse.fromJson(Map<String, dynamic>.from(response.data));
   }
 
   @override
@@ -63,7 +64,7 @@ class ClassroomRepositoryImpl implements ClassroomRepository {
     final response = await _apiClient.post(
       '/api/admin/subjects/$subjectId/classrooms/$classroomId/invite-code/regenerate',
     );
-    return ClassroomResponse.fromJson(response.data);
+    return ClassroomResponse.fromJson(Map<String, dynamic>.from(response.data));
   }
 
   @override
@@ -82,14 +83,18 @@ class ClassroomRepositoryImpl implements ClassroomRepository {
   @override
   Future<List<User>> getAllStudents() async {
     final response = await _apiClient.get('/api/admin/students');
-    final List<dynamic> data = response.data;
-    return data.map((json) => User.fromJson(json)).toList();
+    final List<dynamic> data = response.data ?? [];
+    return data.map((json) => User.fromJson(Map<String, dynamic>.from(json))).toList();
   }
 
   @override
   Future<List<ClassroomResponse>> getStudentClassrooms() async {
     final response = await _apiClient.get('/api/student/classrooms');
-    return (response.data as List).map((e) => ClassroomResponse.fromJson(e)).toList();
+    if (response.data == null) return [];
+    
+    // Ép kiểu Map<String, dynamic> cẩn thận để tránh lỗi casting của Dart
+    final List<dynamic> list = response.data;
+    return list.map((e) => ClassroomResponse.fromJson(Map<String, dynamic>.from(e))).toList();
   }
 
   @override
@@ -98,7 +103,7 @@ class ClassroomRepositoryImpl implements ClassroomRepository {
       '/api/student/classrooms/join-by-code',
       data: {'inviteCode': inviteCode},
     );
-    return ClassroomResponse.fromJson(response.data);
+    return ClassroomResponse.fromJson(Map<String, dynamic>.from(response.data));
   }
 
   @override
@@ -106,7 +111,7 @@ class ClassroomRepositoryImpl implements ClassroomRepository {
     final response = await _apiClient.post(
       '/api/student/classrooms/notifications/$notificationId/accept',
     );
-    return ClassroomResponse.fromJson(response.data);
+    return ClassroomResponse.fromJson(Map<String, dynamic>.from(response.data));
   }
 
   @override
@@ -119,6 +124,6 @@ class ClassroomRepositoryImpl implements ClassroomRepository {
   @override
   Future<NotificationListResponse> getStudentNotifications() async {
     final response = await _apiClient.get('/api/student/notifications');
-    return NotificationListResponse.fromJson(response.data);
+    return NotificationListResponse.fromJson(Map<String, dynamic>.from(response.data));
   }
 }

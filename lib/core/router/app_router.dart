@@ -15,6 +15,7 @@ import '../../features/student/quiz/screens/quiz_screen.dart';
 import '../../features/student/quiz/screens/quiz_catalog_screen.dart';
 import '../../features/student/notifications/screens/notification_screen.dart';
 import '../../features/student/classroom/screens/student_classroom_list_screen.dart';
+import '../../features/student/classroom/screens/student_classroom_detail_screen.dart';
 import '../../features/teacher/dashboard/screens/teacher_dashboard_screen.dart';
 import '../../features/teacher/dashboard/screens/contest_analytics_screen.dart';
 import '../../features/teacher/dashboard/screens/student_submission_detail_screen.dart';
@@ -28,7 +29,6 @@ import '../../features/teacher/subjects/screens/quiz_management_screen.dart';
 import '../../features/teacher/subjects/screens/create_quiz_form.dart';
 import '../../features/teacher/subjects/screens/teacher_classroom_detail_screen.dart';
 import '../../features/welcome/welcome_screen.dart';
-import '../../features/teacher/ai/screens/knowledge_management_screen.dart';
 import '../../features/teacher/ai/screens/knowledge_management_screen.dart';
 import '../../features/teacher/ai/screens/ai_builder_screen.dart';
 import '../../features/teacher/ai/screens/ai_job_detail_screen.dart';
@@ -71,6 +71,7 @@ class AppRouteNames {
   static const String studentHome = 'studentHome';
   static const String studentHistory = 'studentHistory';
   static const String studentClassrooms = 'studentClassrooms';
+  static const String studentClassroomDetail = 'studentClassroomDetail';
   static const String studentQuizCatalog = 'studentQuizCatalog';
   static const String studentQuiz = 'studentQuiz';
   static const String studentResult = 'studentResult';
@@ -325,6 +326,11 @@ final routerProvider = Provider<GoRouter>((ref) {
                     builder: (context, state) => const NotificationScreen(),
                   ),
                   GoRoute(
+                    path: 'leaderboard',
+                    name: AppRouteNames.studentLeaderboard,
+                    builder: (context, state) => const LeaderboardScreen(),
+                  ),
+                  GoRoute(
                     path: 'subject/:subjectId/quizzes',
                     name: AppRouteNames.studentQuizCatalog,
                     builder: (context, state) => QuizCatalogScreen(
@@ -343,7 +349,16 @@ final routerProvider = Provider<GoRouter>((ref) {
               GoRoute(
                 path: '/student/classrooms', 
                 name: AppRouteNames.studentClassrooms, 
-                builder: (context, state) => const StudentClassroomListScreen()
+                builder: (context, state) => const StudentClassroomListScreen(),
+                routes: [
+                  GoRoute(
+                    path: ':classroomId',
+                    name: AppRouteNames.studentClassroomDetail,
+                    builder: (context, state) => StudentClassroomDetailScreen(
+                      classroomId: state.pathParameters['classroomId']!,
+                    ),
+                  ),
+                ],
               )
             ]
           ),

@@ -8,10 +8,10 @@ part of 'classroom_models.dart';
 
 StudentResponse _$StudentResponseFromJson(Map<String, dynamic> json) =>
     StudentResponse(
-      id: json['id'] as String,
-      email: json['email'] as String,
-      name: json['name'] as String,
-      active: json['active'] as bool,
+      id: json['id'] as String?,
+      email: json['email'] as String?,
+      name: json['name'] as String?,
+      active: json['active'] as bool?,
     );
 
 Map<String, dynamic> _$StudentResponseToJson(StudentResponse instance) =>
@@ -29,10 +29,10 @@ AssignedContestResponse _$AssignedContestResponseFromJson(
       subjectId: json['subjectId'] as String?,
       name: json['name'] as String,
       description: json['description'] as String?,
-      durationMinutes: (json['durationMinutes'] as num).toInt(),
-      startAt: json['startAt'] as String,
-      endAt: json['endAt'] as String,
-      computedStatus: json['computedStatus'] as String,
+      durationMinutes: (json['durationMinutes'] as num?)?.toInt(),
+      startAt: json['startAt'] as String?,
+      endAt: json['endAt'] as String?,
+      computedStatus: json['computedStatus'] as String?,
       classroomIds: (json['classroomIds'] as List<dynamic>?)
           ?.map((e) => e as String)
           .toList(),
@@ -57,19 +57,19 @@ Map<String, dynamic> _$AssignedContestResponseToJson(
 ClassroomResponse _$ClassroomResponseFromJson(Map<String, dynamic> json) =>
     ClassroomResponse(
       id: json['id'] as String,
-      subjectId: json['subjectId'] as String,
-      teacherId: json['teacherId'] as String,
+      subjectId: json['subjectId'] as String?,
+      teacherId: json['teacherId'] as String?,
       name: json['name'] as String,
-      inviteCode: json['inviteCode'] as String,
-      studentIds: (json['studentIds'] as List<dynamic>)
-          .map((e) => e as String)
+      inviteCode: json['inviteCode'] as String?,
+      studentIds: (json['studentIds'] as List<dynamic>?)
+          ?.map((e) => e as String)
           .toList(),
-      studentCount: (json['studentCount'] as num).toInt(),
-      students: (json['students'] as List<dynamic>)
-          .map((e) => StudentResponse.fromJson(e as Map<String, dynamic>))
+      studentCount: (json['studentCount'] as num?)?.toInt(),
+      students: (json['students'] as List<dynamic>?)
+          ?.map((e) => StudentResponse.fromJson(e as Map<String, dynamic>))
           .toList(),
-      assignedContests: (json['assignedContests'] as List<dynamic>)
-          .map((e) =>
+      assignedContests: (json['assignedContests'] as List<dynamic>?)
+          ?.map((e) =>
               AssignedContestResponse.fromJson(e as Map<String, dynamic>))
           .toList(),
     );
@@ -90,19 +90,19 @@ Map<String, dynamic> _$ClassroomResponseToJson(ClassroomResponse instance) =>
 NotificationItem _$NotificationItemFromJson(Map<String, dynamic> json) =>
     NotificationItem(
       id: json['id'] as String,
-      subjectId: json['subjectId'] as String,
-      subjectName: json['subjectName'] as String,
+      subjectId: json['subjectId'] as String?,
+      subjectName: json['subjectName'] as String?,
       contestId: json['contestId'] as String?,
       contestName: json['contestName'] as String?,
       classroomId: json['classroomId'] as String?,
       classroomName: json['classroomName'] as String?,
       inviteCode: json['inviteCode'] as String?,
-      type: json['type'] as String,
-      title: json['title'] as String,
-      message: json['message'] as String,
-      read: json['read'] as bool,
+      type: json['type'] as String?,
+      title: json['title'] as String?,
+      message: json['message'] as String?,
+      read: json['read'] as bool?,
       readAt: json['readAt'] as String?,
-      createdAt: json['createdAt'] as String,
+      createdAt: json['createdAt'] as String?,
     );
 
 Map<String, dynamic> _$NotificationItemToJson(NotificationItem instance) =>
@@ -126,10 +126,10 @@ Map<String, dynamic> _$NotificationItemToJson(NotificationItem instance) =>
 NotificationListResponse _$NotificationListResponseFromJson(
         Map<String, dynamic> json) =>
     NotificationListResponse(
-      items: (json['items'] as List<dynamic>)
-          .map((e) => NotificationItem.fromJson(e as Map<String, dynamic>))
+      items: (json['items'] as List<dynamic>?)
+          ?.map((e) => NotificationItem.fromJson(e as Map<String, dynamic>))
           .toList(),
-      unreadCount: (json['unreadCount'] as num).toInt(),
+      unreadCount: (json['unreadCount'] as num?)?.toInt(),
     );
 
 Map<String, dynamic> _$NotificationListResponseToJson(

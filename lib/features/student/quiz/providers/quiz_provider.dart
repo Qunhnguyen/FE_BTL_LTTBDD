@@ -5,10 +5,10 @@ import '../models/quiz_submission.dart';
 import '../models/quiz_result.dart';
 import '../repositories/quiz_repository.dart';
 import 'quiz_result_provider.dart';
+import '../../leaderboard/providers/leaderboard_provider.dart';
 
 typedef QuizState = QuizRuntimeState;
 
-// CUNG CẤP LẠI PROVIDER DANH SÁCH QUIZ ĐỂ HẾT LỖI COMPILE
 final studentQuizListProvider = FutureProvider.family<List<dynamic>, String>((ref, subjectId) async {
   final repository = ref.watch(studentQuizRepositoryProvider);
   return repository.getQuizzes(subjectId);
@@ -32,6 +32,8 @@ class QuizRuntimeState {
   final SubmissionResult? result;
   final int remainingSeconds;
   final Map<String, List<String>> disabledOptions;
+  final Set<String> usedPowerUps;
+  final Map<String, String> questionHints; // THEEM: Luu text gợi ý theo questionId
 
   QuizRuntimeState({
     this.submission,
@@ -46,6 +48,8 @@ class QuizRuntimeState {
     this.result,
     this.remainingSeconds = 0,
     this.disabledOptions = const {},
+    this.usedPowerUps = const {},
+    this.questionHints = const {},
   });
 
   QuizRuntimeState copyWith({
@@ -61,6 +65,8 @@ class QuizRuntimeState {
     SubmissionResult? result,
     int? remainingSeconds,
     Map<String, List<String>>? disabledOptions,
+    Set<String>? usedPowerUps,
+    Map<String, String>? questionHints,
   }) {
     return QuizRuntimeState(
       submission: submission ?? this.submission,
@@ -75,6 +81,8 @@ class QuizRuntimeState {
       result: result ?? this.result,
       remainingSeconds: remainingSeconds ?? this.remainingSeconds,
       disabledOptions: disabledOptions ?? this.disabledOptions,
+      usedPowerUps: usedPowerUps ?? this.usedPowerUps,
+      questionHints: questionHints ?? this.questionHints,
     );
   }
 
@@ -91,7 +99,8 @@ class QuizRuntimeController extends StateNotifier<QuizRuntimeState> {
   QuizRuntimeController(this._repository, this._ref) : super(QuizRuntimeState());
 
   Future<void> startQuiz(String quizId) async {
-    state = state.copyWith(isLoading: true, errorMessage: null);
+    state = QuizRuntimeState(); 
+    state = state.copyWith(isLoading: true);
     try {
       final submission = await _repository.startQuiz(quizId);
       _elapsedSeconds = 0;
@@ -152,21 +161,45 @@ class QuizRuntimeController extends StateNotifier<QuizRuntimeState> {
   Future<void> usePowerUp(String type) async {
     final currentQuestionId = state.currentQuestion?.id;
     if (state.submission == null || currentQuestionId == null) return;
+    
+    if (state.usedPowerUps.contains(type)) return;
+
     try {
       final response = await _repository.usePowerUp(state.submission!.submissionId, currentQuestionId, type);
-      if (type == 'FIFTY_FIFTY' && response['disabledKeys'] != null) {
-        final disabledKeys = List<String>.from(response['disabledKeys']);
+      print('DEBUG: Power-up response for $type: $response');
+
+      final newUsed = Set<String>.from(state.usedPowerUps)..add(type);
+      
+      if (type == 'FIFTY_FIFTY') {
+        final dynamic rawKeys = response['removedOptions'];
+        final List<String> disabledKeys = rawKeys != null ? List<String>.from(rawKeys) : [];
         final newDisabled = Map<String, List<String>>.from(state.disabledOptions);
         newDisabled[currentQuestionId] = disabledKeys;
-        state = state.copyWith(disabledOptions: newDisabled);
+        state = state.copyWith(disabledOptions: newDisabled, usedPowerUps: newUsed);
       } else if (type == 'SKIP') {
+        state = state.copyWith(usedPowerUps: newUsed);
         nextQuestion();
+      } else if (type == 'HINT') {
+        // XỬ LÝ HINT TỪ BE
+        final String hintText = response['hintText'] ?? response['hint'] ?? 'Không có gợi ý cụ thể.';
+        final newHints = Map<String, String>.from(state.questionHints);
+        newHints[currentQuestionId] = hintText;
+        state = state.copyWith(questionHints: newHints, usedPowerUps: newUsed);
+      } else {
+        state = state.copyWith(usedPowerUps: newUsed);
       }
-    } catch (e) {}
+    } catch (e) {
+      print('ERROR: Power-up failed: $e');
+      if (e.toString().contains('already been used')) {
+        state = state.copyWith(usedPowerUps: {...state.usedPowerUps, type});
+      }
+    }
   }
 
   Future<void> finishQuiz() async {
     if (state.submission == null || state.isFinished) return;
+    final quizId = state.submission!.quizId;
+    
     state = state.copyWith(isSubmitting: true);
     _timer?.cancel();
     try {
@@ -179,7 +212,10 @@ class QuizRuntimeController extends StateNotifier<QuizRuntimeState> {
         elapsedSeconds: _elapsedSeconds,
         completedAt: DateTime.now(),
       );
+      
       _ref.read(quizResultProvider.notifier).state = finalResult;
+      _ref.read(selectedLeaderboardContestIdProvider.notifier).state = quizId;
+
       state = state.copyWith(isSubmitting: false, isFinished: true, result: subResult);
     } catch (e) {
       state = state.copyWith(isSubmitting: false);

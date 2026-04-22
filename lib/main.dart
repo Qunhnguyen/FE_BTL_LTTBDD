@@ -8,6 +8,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'core/network/push_notification_service.dart';
 import 'core/router/app_router.dart';
 import 'core/theme/app_theme.dart';
+import 'core/theme/theme_provider.dart';
 import 'features/auth/providers/auth_provider.dart';
 
 Future<void> main() async {
@@ -91,11 +92,14 @@ class _QuizAppState extends ConsumerState<QuizApp> {
   @override
   Widget build(BuildContext context) {
     final router = ref.watch(routerProvider);
+    // Lắng nghe thay đổi theme
+    final themeMode = ref.watch(themeProvider);
 
     return MaterialApp.router(
       title: 'Quiz System',
       theme: AppTheme.light,
       darkTheme: AppTheme.dark,
+      themeMode: themeMode, // Áp dụng themeMode từ provider
       routerConfig: router,
       debugShowCheckedModeBanner: false,
     );

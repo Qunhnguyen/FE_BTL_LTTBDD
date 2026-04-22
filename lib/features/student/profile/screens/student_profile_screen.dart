@@ -9,6 +9,7 @@ import 'package:image_picker/image_picker.dart';
 import '../../../../core/error/app_failure.dart';
 import '../../../../core/network/push_notification_service.dart';
 import '../../../../core/router/app_router.dart';
+import '../../../../core/theme/theme_provider.dart';
 import '../../../auth/models/user.dart';
 import '../../../auth/providers/auth_provider.dart';
 
@@ -39,7 +40,6 @@ class _StudentProfileScreenState extends ConsumerState<StudentProfileScreen> {
 
   bool _isSavingProfile = false;
   bool _isUploadingAvatar = false;
-  bool _isResolvingFcmToken = false;
   String? _syncedUserId;
   String? _syncedUserName;
 
@@ -63,6 +63,7 @@ class _StudentProfileScreenState extends ConsumerState<StudentProfileScreen> {
     final theme = Theme.of(context);
     final authState = ref.watch(authProvider);
     final user = authState.user;
+    final themeMode = ref.watch(themeProvider);
 
     _syncFormWithUser(user);
 
@@ -88,29 +89,6 @@ class _StudentProfileScreenState extends ConsumerState<StudentProfileScreen> {
                       isUploading: _isUploadingAvatar,
                     ),
                     const SizedBox(height: 24),
-                    _SectionCard(
-                      child: Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Icon(
-                            Icons.info_outline,
-                            size: 20,
-                            color: theme.colorScheme.primary,
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: Text(
-                              'Bạn chỉ có thể cập nhật tên và ảnh đại diện. Nhấn "Chỉnh sửa thông tin" để mở form cập nhật tên.',
-                              style: theme.textTheme.bodyMedium?.copyWith(
-                                color: Colors.grey[700],
-                                height: 1.4,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(height: 20),
                     _SectionCard(
                       child: Column(
                         children: [
@@ -140,6 +118,36 @@ class _StudentProfileScreenState extends ConsumerState<StudentProfileScreen> {
                                         strokeWidth: 2),
                                   )
                                 : const Icon(Icons.chevron_right),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 20),
+                    _SectionCard(
+                      child: Column(
+                        children: [
+                          // SỬA: Thêm Switch cho chế độ sáng/tối
+                          ListTile(
+                            contentPadding: EdgeInsets.zero,
+                            leading: Container(
+                              padding: const EdgeInsets.all(10),
+                              decoration: BoxDecoration(
+                                color: theme.colorScheme.primary.withOpacity(0.1),
+                                shape: BoxShape.circle,
+                              ),
+                              child: Icon(
+                                themeMode == ThemeMode.dark ? Icons.dark_mode : Icons.light_mode,
+                                color: theme.colorScheme.primary,
+                              ),
+                            ),
+                            title: const Text('Chế độ tối', style: TextStyle(fontWeight: FontWeight.w600)),
+                            subtitle: Text(themeMode == ThemeMode.dark ? 'Đang bật' : 'Đang tắt'),
+                            trailing: Switch(
+                              value: themeMode == ThemeMode.dark,
+                              onChanged: (value) {
+                                ref.read(themeProvider.notifier).toggleTheme(value);
+                              },
+                            ),
                           ),
                           const Divider(height: 20),
                           _buildProfileOption(
@@ -171,7 +179,7 @@ class _StudentProfileScreenState extends ConsumerState<StudentProfileScreen> {
                       leading: Container(
                         padding: const EdgeInsets.all(10),
                         decoration: BoxDecoration(
-                          color: Colors.red.withValues(alpha: 0.1),
+                          color: Colors.red.withOpacity(0.1),
                           shape: BoxShape.circle,
                         ),
                         child: const Icon(Icons.logout, color: Colors.red),
@@ -233,7 +241,7 @@ class _StudentProfileScreenState extends ConsumerState<StudentProfileScreen> {
       leading: Container(
         padding: const EdgeInsets.all(10),
         decoration: BoxDecoration(
-          color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.10),
+          color: Theme.of(context).colorScheme.primary.withOpacity(0.10),
           shape: BoxShape.circle,
         ),
         child: Icon(icon, color: Theme.of(context).colorScheme.primary),
@@ -554,7 +562,7 @@ class _ProfileAvatarSection extends StatelessWidget {
               Positioned.fill(
                 child: DecoratedBox(
                   decoration: BoxDecoration(
-                    color: Colors.black.withValues(alpha: 0.35),
+                    color: Colors.black.withOpacity(0.35),
                     shape: BoxShape.circle,
                   ),
                   child: const Center(
@@ -627,7 +635,7 @@ class _AvatarFallback extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      color: theme.colorScheme.primary.withValues(alpha: 0.12),
+      color: theme.colorScheme.primary.withOpacity(0.12),
       alignment: Alignment.center,
       child: Text(
         label,
@@ -653,7 +661,7 @@ class _SectionCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
-        color: isDark ? Colors.white.withValues(alpha: 0.05) : Colors.white,
+        color: isDark ? Colors.white.withOpacity(0.05) : Colors.white,
         borderRadius: BorderRadius.circular(20),
         border: Border.all(
           color: isDark ? Colors.white10 : (Colors.grey[200] ?? Colors.grey),

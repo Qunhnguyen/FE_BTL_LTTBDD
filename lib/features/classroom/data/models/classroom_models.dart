@@ -4,12 +4,12 @@ part 'classroom_models.g.dart';
 
 @JsonSerializable()
 class StudentResponse {
-  final String id;
-  final String email;
-  final String name;
-  final bool active;
+  final String? id;
+  final String? email;
+  final String? name;
+  final bool? active;
 
-  StudentResponse({required this.id, required this.email, required this.name, required this.active});
+  StudentResponse({this.id, this.email, this.name, this.active});
   factory StudentResponse.fromJson(Map<String, dynamic> json) => _$StudentResponseFromJson(json);
   Map<String, dynamic> toJson() => _$StudentResponseToJson(this);
 }
@@ -20,10 +20,10 @@ class AssignedContestResponse {
   final String? subjectId;
   final String name;
   final String? description;
-  final int durationMinutes;
-  final String startAt;
-  final String endAt;
-  final String computedStatus;
+  final int? durationMinutes;
+  final String? startAt;
+  final String? endAt;
+  final String? computedStatus;
   final List<String>? classroomIds;
   final bool? isPublic;
 
@@ -32,10 +32,10 @@ class AssignedContestResponse {
     this.subjectId,
     required this.name,
     this.description,
-    required this.durationMinutes,
-    required this.startAt,
-    required this.endAt,
-    required this.computedStatus,
+    this.durationMinutes,
+    this.startAt,
+    this.endAt,
+    this.computedStatus,
     this.classroomIds,
     this.isPublic,
   });
@@ -47,25 +47,25 @@ class AssignedContestResponse {
 @JsonSerializable()
 class ClassroomResponse {
   final String id;
-  final String subjectId;
-  final String teacherId;
+  final String? subjectId;
+  final String? teacherId;
   final String name;
-  final String inviteCode;
-  final List<String> studentIds;
-  final int studentCount;
-  final List<StudentResponse> students;
-  final List<AssignedContestResponse> assignedContests;
+  final String? inviteCode; // SỬA: Cho phép null vì log báo inviteCode: null
+  final List<String>? studentIds;
+  final int? studentCount;
+  final List<StudentResponse>? students;
+  final List<AssignedContestResponse>? assignedContests;
 
   ClassroomResponse({
     required this.id,
-    required this.subjectId,
-    required this.teacherId,
+    this.subjectId,
+    this.teacherId,
     required this.name,
-    required this.inviteCode,
-    required this.studentIds,
-    required this.studentCount,
-    required this.students,
-    required this.assignedContests,
+    this.inviteCode,
+    this.studentIds,
+    this.studentCount,
+    this.students,
+    this.assignedContests,
   });
 
   factory ClassroomResponse.fromJson(Map<String, dynamic> json) => _$ClassroomResponseFromJson(json);
@@ -75,35 +75,35 @@ class ClassroomResponse {
 @JsonSerializable()
 class NotificationItem {
   final String id;
-  final String subjectId;
-  final String subjectName;
+  final String? subjectId;
+  final String? subjectName;
   final String? contestId;
   final String? contestName;
   final String? classroomId;
   final String? classroomName;
   final String? inviteCode;
-  final String type;
-  final String title;
-  final String message;
-  final bool read;
+  final String? type;
+  final String? title;
+  final String? message;
+  final bool? read;
   final String? readAt;
-  final String createdAt;
+  final String? createdAt;
 
   NotificationItem({
     required this.id,
-    required this.subjectId,
-    required this.subjectName,
+    this.subjectId,
+    this.subjectName,
     this.contestId,
     this.contestName,
     this.classroomId,
     this.classroomName,
     this.inviteCode,
-    required this.type,
-    required this.title,
-    required this.message,
-    required this.read,
+    this.type,
+    this.title,
+    this.message,
+    this.read,
     this.readAt,
-    required this.createdAt,
+    this.createdAt,
   });
 
   factory NotificationItem.fromJson(Map<String, dynamic> json) => _$NotificationItemFromJson(json);
@@ -111,9 +111,9 @@ class NotificationItem {
 
 @JsonSerializable()
 class NotificationListResponse {
-  final List<NotificationItem> items;
-  final int unreadCount;
+  final List<NotificationItem>? items;
+  final int? unreadCount;
 
-  NotificationListResponse({required this.items, required this.unreadCount});
+  NotificationListResponse({this.items, this.unreadCount});
   factory NotificationListResponse.fromJson(Map<String, dynamic> json) => _$NotificationListResponseFromJson(json);
 }

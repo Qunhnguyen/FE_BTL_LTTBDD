@@ -15,8 +15,8 @@ class ClassroomNotifier extends StateNotifier<ClassroomState> {
     try {
       final classrooms = await _repository.getTeacherClassrooms(subjectId);
       state = ClassroomLoaded(classrooms);
-    } on AppFailure catch (e) {
-      state = ClassroomError(e.message);
+    } catch (e) {
+      state = ClassroomError(e is AppFailure ? e.message : e.toString());
     }
   }
 
@@ -25,26 +25,22 @@ class ClassroomNotifier extends StateNotifier<ClassroomState> {
     try {
       final classroom = await _repository.getClassroomById(subjectId, classroomId);
       state = ClassroomDetailLoaded(classroom);
-    } on AppFailure catch (e) {
-      state = ClassroomError(e.message);
+    } catch (e) {
+      state = ClassroomError(e is AppFailure ? e.message : e.toString());
     }
   }
 
   Future<void> createClassroom(String subjectId, String name, List<String> studentIds) async {
     state = ClassroomLoading();
     try {
-      // Bước 1: Tạo lớp học mới với danh sách sinh viên rỗng để đảm bảo không add trực tiếp
       final classroom = await _repository.createClassroom(subjectId, name, []);
-      
-      // Bước 2: Nếu có sinh viên được chọn, thực hiện gửi lời mời
       if (studentIds.isNotEmpty) {
         await _repository.sendInvites(subjectId, classroom.id, studentIds);
       }
-      
       state = ClassroomOperationSuccess('Lớp học đã được tạo và lời mời đã được gửi đi', classroom: classroom);
       fetchTeacherClassrooms(subjectId);
-    } on AppFailure catch (e) {
-      state = ClassroomError(e.message);
+    } catch (e) {
+      state = ClassroomError(e is AppFailure ? e.message : e.toString());
     }
   }
 
@@ -52,10 +48,10 @@ class ClassroomNotifier extends StateNotifier<ClassroomState> {
     state = ClassroomLoading();
     try {
       final classroom = await _repository.updateClassroom(subjectId, classroomId, name: name, studentIds: studentIds);
-      state = ClassroomOperationSuccess('Classroom updated successfully', classroom: classroom);
+      state = ClassroomOperationSuccess('Cập nhật lớp học thành công', classroom: classroom);
       state = ClassroomDetailLoaded(classroom);
-    } on AppFailure catch (e) {
-      state = ClassroomError(e.message);
+    } catch (e) {
+      state = ClassroomError(e is AppFailure ? e.message : e.toString());
     }
   }
 
@@ -65,8 +61,8 @@ class ClassroomNotifier extends StateNotifier<ClassroomState> {
       await _repository.sendInvites(subjectId, classroomId, studentIds);
       state = ClassroomOperationSuccess('Đã gửi lời mời tới ${studentIds.length} sinh viên');
       fetchClassroomDetail(subjectId, classroomId);
-    } on AppFailure catch (e) {
-      state = ClassroomError(e.message);
+    } catch (e) {
+      state = ClassroomError(e is AppFailure ? e.message : e.toString());
     }
   }
 
@@ -76,8 +72,8 @@ class ClassroomNotifier extends StateNotifier<ClassroomState> {
       final classroom = await _repository.removeStudent(subjectId, classroomId, studentId);
       state = ClassroomOperationSuccess('Đã xóa sinh viên khỏi lớp', classroom: classroom);
       state = ClassroomDetailLoaded(classroom);
-    } on AppFailure catch (e) {
-      state = ClassroomError(e.message);
+    } catch (e) {
+      state = ClassroomError(e is AppFailure ? e.message : e.toString());
     }
   }
 
@@ -85,20 +81,20 @@ class ClassroomNotifier extends StateNotifier<ClassroomState> {
     state = ClassroomLoading();
     try {
       await _repository.deleteClassroom(subjectId, classroomId);
-      state = ClassroomOperationSuccess('Classroom deleted successfully');
+      state = ClassroomOperationSuccess('Xóa lớp học thành công');
       fetchTeacherClassrooms(subjectId);
-    } on AppFailure catch (e) {
-      state = ClassroomError(e.message);
+    } catch (e) {
+      state = ClassroomError(e is AppFailure ? e.message : e.toString());
     }
   }
 
   Future<void> regenerateInviteCode(String subjectId, String classroomId) async {
     try {
       final classroom = await _repository.regenerateInviteCode(subjectId, classroomId);
-      state = ClassroomOperationSuccess('Invite code regenerated', classroom: classroom);
+      state = ClassroomOperationSuccess('Mã mời đã được tạo mới', classroom: classroom);
       state = ClassroomDetailLoaded(classroom);
-    } on AppFailure catch (e) {
-      state = ClassroomError(e.message);
+    } catch (e) {
+      state = ClassroomError(e is AppFailure ? e.message : e.toString());
     }
   }
 
@@ -109,8 +105,9 @@ class ClassroomNotifier extends StateNotifier<ClassroomState> {
     try {
       final classrooms = await _repository.getStudentClassrooms();
       state = ClassroomLoaded(classrooms);
-    } on AppFailure catch (e) {
-      state = ClassroomError(e.message);
+    } catch (e) {
+      // Sửa lỗi: Bắt mọi exception để không bị kẹt spinner
+      state = ClassroomError(e is AppFailure ? e.message : e.toString());
     }
   }
 
@@ -118,10 +115,10 @@ class ClassroomNotifier extends StateNotifier<ClassroomState> {
     state = ClassroomLoading();
     try {
       final classroom = await _repository.joinByCode(inviteCode);
-      state = ClassroomOperationSuccess('Joined classroom successfully', classroom: classroom);
+      state = ClassroomOperationSuccess('Tham gia lớp học thành công', classroom: classroom);
       fetchStudentClassrooms();
-    } on AppFailure catch (e) {
-      state = ClassroomError(e.message);
+    } catch (e) {
+      state = ClassroomError(e is AppFailure ? e.message : e.toString());
     }
   }
 
@@ -129,10 +126,10 @@ class ClassroomNotifier extends StateNotifier<ClassroomState> {
     state = ClassroomLoading();
     try {
       final classroom = await _repository.acceptInvite(notificationId);
-      state = ClassroomOperationSuccess('Invite accepted', classroom: classroom);
+      state = ClassroomOperationSuccess('Đã chấp nhận lời mời', classroom: classroom);
       fetchStudentClassrooms();
-    } on AppFailure catch (e) {
-      state = ClassroomError(e.message);
+    } catch (e) {
+      state = ClassroomError(e is AppFailure ? e.message : e.toString());
     }
   }
 }

@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import '../models/leaderboard_entry.dart';
 import '../providers/leaderboard_provider.dart';
-import '../../../teacher/subjects/providers/subject_providers.dart'; // Dùng để chọn môn học
-import '../../quiz/providers/quiz_provider.dart'; // Dùng để chọn quiz
+import '../../../teacher/subjects/providers/subject_providers.dart';
+import '../../quiz/providers/quiz_provider.dart';
 
 class LeaderboardScreen extends ConsumerStatefulWidget {
   const LeaderboardScreen({super.key});
@@ -15,15 +16,38 @@ class LeaderboardScreen extends ConsumerStatefulWidget {
 class _LeaderboardScreenState extends ConsumerState<LeaderboardScreen> {
   String? _selectedSubjectId;
   String? _selectedQuizId;
+  bool _isInitialized = false;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // Đồng bộ với Provider nếu có dữ liệu từ bài thi vừa làm
+    if (!_isInitialized) {
+      final contestId = ref.watch(selectedLeaderboardContestIdProvider);
+      if (contestId != null) {
+        _selectedQuizId = contestId;
+        // Chúng ta chưa có subjectId ở đây, nhưng UI sẽ tự động load khi subjectsProvider hoàn tất
+      }
+      _isInitialized = true;
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
     
-    // Lấy danh sách môn học
+    // Lắng nghe danh sách môn học
     final subjectsAsync = ref.watch(subjectsProvider);
     
+    // Lấy contestId từ provider (dành cho trường hợp vừa thi xong)
+    final contestIdFromProvider = ref.watch(selectedLeaderboardContestIdProvider);
+    
+    // Đồng bộ local state với provider nếu cần
+    if (contestIdFromProvider != null && _selectedQuizId != contestIdFromProvider) {
+       _selectedQuizId = contestIdFromProvider;
+    }
+
     // Lấy danh sách Quiz nếu đã chọn môn
     final quizzesAsync = _selectedSubjectId != null 
         ? ref.watch(studentQuizListProvider(_selectedSubjectId!))
@@ -31,53 +55,66 @@ class _LeaderboardScreenState extends ConsumerState<LeaderboardScreen> {
 
     // Lấy bảng xếp hạng theo Quiz được chọn
     final entriesAsync = _selectedQuizId != null 
-        ? ref.watch(leaderboardEntriesProvider) // LeaderboardProvider cần được update để nhận quizId
+        ? ref.watch(leaderboardEntriesProvider)
         : const AsyncValue<List<LeaderboardEntry>>.data([]);
 
     return Scaffold(
       appBar: AppBar(
-        automaticallyImplyLeading: false,
+        automaticallyImplyLeading: true,
+        leading: context.canPop() ? IconButton(
+          icon: const Icon(Icons.arrow_back_ios_new_rounded),
+          onPressed: () => context.pop(),
+        ) : null,
         title: const Text('Bảng xếp hạng', style: TextStyle(fontWeight: FontWeight.bold)),
       ),
       body: Column(
         children: [
-          // BỘ LỌC CHỌN QUIZ (MÔN HỌC -> QUIZ)
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16),
             child: Column(
               children: [
+                // DROPDOWN MÔN HỌC
                 subjectsAsync.when(
-                  data: (subjects) => DropdownButtonFormField<String>(
-                    value: _selectedSubjectId,
-                    hint: const Text('Chọn môn học'),
-                    items: subjects.map((s) => DropdownMenuItem(value: s.id, child: Text(s.name))).toList(),
-                    onChanged: (val) {
-                      setState(() {
-                        _selectedSubjectId = val;
-                        _selectedQuizId = null;
-                      });
-                    },
-                  ),
+                  data: (subjects) {
+                    return DropdownButtonFormField<String>(
+                      value: _selectedSubjectId,
+                      hint: const Text('Chọn môn học'),
+                      items: subjects.map((s) => DropdownMenuItem(value: s.id, child: Text(s.name))).toList(),
+                      onChanged: (val) {
+                        setState(() {
+                          _selectedSubjectId = val;
+                          _selectedQuizId = null; // Reset quiz khi đổi môn
+                          ref.read(selectedLeaderboardContestIdProvider.notifier).state = null;
+                        });
+                      },
+                    );
+                  },
                   loading: () => const LinearProgressIndicator(),
                   error: (_, __) => const Text('Lỗi tải môn học'),
                 ),
                 const SizedBox(height: 8),
+                
+                // DROPDOWN BÀI THI (QUIZ)
                 quizzesAsync.when(
-                  data: (quizzes) => DropdownButtonFormField<String>(
-                    value: _selectedQuizId,
-                    hint: const Text('Chọn bài thi (Quiz)'),
-                    items: quizzes.map<DropdownMenuItem<String>>((q) => DropdownMenuItem(
-                      value: q['id'].toString(), 
-                      child: Text(q['name'] ?? '')
-                    )).toList(),
-                    onChanged: (val) {
-                      setState(() => _selectedQuizId = val);
-                      // Cập nhật Provider xếp hạng
-                      if (val != null) {
-                        ref.read(selectedLeaderboardContestIdProvider.notifier).state = val;
-                      }
-                    },
-                  ),
+                  data: (quizzes) {
+                    // Tự động chọn Quiz nếu nó nằm trong danh sách của môn này
+                    bool containsSelected = quizzes.any((q) => q['id'].toString() == _selectedQuizId);
+                    
+                    return DropdownButtonFormField<String>(
+                      value: containsSelected ? _selectedQuizId : null,
+                      hint: const Text('Chọn bài thi (Quiz)'),
+                      items: quizzes.map<DropdownMenuItem<String>>((q) => DropdownMenuItem(
+                        value: q['id'].toString(), 
+                        child: Text(q['name'] ?? '')
+                      )).toList(),
+                      onChanged: (val) {
+                        setState(() => _selectedQuizId = val);
+                        if (val != null) {
+                          ref.read(selectedLeaderboardContestIdProvider.notifier).state = val;
+                        }
+                      },
+                    );
+                  },
                   loading: () => const SizedBox.shrink(),
                   error: (_, __) => const SizedBox.shrink(),
                 ),
@@ -141,7 +178,6 @@ class _LeaderboardScreenState extends ConsumerState<LeaderboardScreen> {
   }
 }
 
-// Giữ nguyên các class _Podium, _PodiumItem, _LeaderboardTile, _AvatarFallback cũ của bạn vì chúng đã đẹp sẵn
 class _Podium extends StatelessWidget {
   final List<LeaderboardEntry> entries;
   const _Podium({required this.entries});
@@ -183,7 +219,9 @@ class _PodiumItem extends StatelessWidget {
               width: avatarSize, height: avatarSize,
               decoration: BoxDecoration(shape: BoxShape.circle, border: Border.all(color: color, width: 4)),
               clipBehavior: Clip.antiAlias,
-              child: Image.network(entry.avatarUrl, fit: BoxFit.cover, errorBuilder: (_, __, ___) => _AvatarFallback(size: avatarSize)),
+              child: entry.avatarUrl.isNotEmpty 
+                ? Image.network(entry.avatarUrl, fit: BoxFit.cover, errorBuilder: (_, __, ___) => _AvatarFallback(size: avatarSize, name: entry.name))
+                : _AvatarFallback(size: avatarSize, name: entry.name),
             ),
             Positioned(bottom: -12, child: Container(width: 24, height: 24, alignment: Alignment.center, decoration: BoxDecoration(color: color, shape: BoxShape.circle, border: Border.all(color: Colors.white, width: 2)), child: Text('$rank', style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold)))),
           ],
@@ -211,7 +249,11 @@ class _LeaderboardTile extends StatelessWidget {
       child: Row(
         children: [
           SizedBox(width: 32, child: Text('${entry.rank}', style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.grey))),
-          const CircleAvatar(radius: 20, child: Icon(Icons.person)),
+          CircleAvatar(
+            radius: 20, 
+            backgroundImage: entry.avatarUrl.isNotEmpty ? NetworkImage(entry.avatarUrl) : null,
+            child: entry.avatarUrl.isEmpty ? Text(entry.name.characters.first.toUpperCase()) : null,
+          ),
           const SizedBox(width: 12),
           Expanded(child: Text(entry.name, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14))),
           Text('${entry.score}', style: TextStyle(fontWeight: FontWeight.bold, color: theme.colorScheme.primary)),
@@ -223,9 +265,19 @@ class _LeaderboardTile extends StatelessWidget {
 
 class _AvatarFallback extends StatelessWidget {
   final double size;
-  const _AvatarFallback({required this.size});
+  final String name;
+  const _AvatarFallback({required this.size, required this.name});
   @override
   Widget build(BuildContext context) {
-    return Container(width: size, height: size, color: Colors.blue.withOpacity(0.1), alignment: Alignment.center, child: Icon(Icons.person, size: size * 0.5, color: Colors.blue));
+    return Container(
+      width: size, 
+      height: size, 
+      color: Colors.blue.withOpacity(0.1), 
+      alignment: Alignment.center, 
+      child: Text(
+        name.isNotEmpty ? name.characters.first.toUpperCase() : '?',
+        style: TextStyle(fontSize: size * 0.4, fontWeight: FontWeight.bold, color: Colors.blue),
+      )
+    );
   }
 }

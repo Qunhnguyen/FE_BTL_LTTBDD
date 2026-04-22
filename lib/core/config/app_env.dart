@@ -5,7 +5,7 @@ class AppEnv {
   // Cổng 9999 theo log lỗi của bạn
   static const String apiBaseUrl = String.fromEnvironment(
     'API_BASE_URL',
-    defaultValue: 'http://192.168.0.104:8080',
+    defaultValue: 'http://172.11.192.232:8080',
   );
 
   static const String appName = 'Quiz System';
