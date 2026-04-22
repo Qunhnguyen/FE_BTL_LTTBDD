@@ -31,7 +31,6 @@ class _TeacherClassroomDetailScreenState extends ConsumerState<TeacherClassroomD
   Widget build(BuildContext context) {
     final state = ref.watch(classroomCubitProvider);
 
-    // Listen for success messages
     ref.listen(classroomCubitProvider, (previous, next) {
       if (next is ClassroomOperationSuccess) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -83,13 +82,13 @@ class _TeacherClassroomDetailScreenState extends ConsumerState<TeacherClassroomD
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             _buildInfoCard(classroom),
-            const SizedBox(height: 20),
+            const SizedBox(height: 24),
             _buildSectionTitle('Mã mời tham gia'),
             _buildInviteCodeCard(classroom),
-            const SizedBox(height: 20),
+            const SizedBox(height: 24),
             _buildSectionTitle('Sinh viên (${classroom.studentCount})'),
             _buildStudentList(classroom),
-            const SizedBox(height: 20),
+            const SizedBox(height: 24),
             _buildSectionTitle('Bài kiểm tra đã giao'),
             _buildContestList(classroom),
           ],
@@ -104,101 +103,115 @@ class _TeacherClassroomDetailScreenState extends ConsumerState<TeacherClassroomD
       padding: const EdgeInsets.only(bottom: 12, left: 4),
       child: Text(
         title,
-        style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+        style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
       ),
     );
   }
 
   Widget _buildInfoCard(dynamic classroom) {
-    return Card(
-      elevation: 2,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Row(
-          children: [
-            CircleAvatar(
-              radius: 30,
-              backgroundColor: Theme.of(context).primaryColor.withOpacity(0.1),
-              child: Icon(Icons.class_, size: 30, color: Theme.of(context).primaryColor),
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: Theme.of(context).cardColor,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: Colors.grey.withOpacity(0.1)),
+      ),
+      child: Row(
+        children: [
+          CircleAvatar(
+            radius: 28,
+            backgroundColor: Theme.of(context).primaryColor.withOpacity(0.1),
+            child: Icon(Icons.class_, size: 28, color: Theme.of(context).primaryColor),
+          ),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  classroom.name,
+                  style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  'ID Lớp: ${classroom.id}',
+                  style: TextStyle(color: Colors.grey[600], fontSize: 11),
+                ),
+              ],
             ),
-            const SizedBox(width: 16),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    classroom.name,
-                    style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    'ID: ${classroom.id}',
-                    style: TextStyle(color: Colors.grey[600], fontSize: 12),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
 
   Widget _buildInviteCodeCard(dynamic classroom) {
-    return Card(
-      color: Colors.blue.shade50,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Column(
+    final theme = Theme.of(context);
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: theme.colorScheme.primary.withOpacity(0.05),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: theme.colorScheme.primary.withOpacity(0.2)),
+      ),
+      child: Row(
+        children: [
+          // SỬA LỖI TRÀN VIỀN: Dùng Expanded bao bọc text
+          Expanded(
+            child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  classroom.inviteCode,
-                  style: const TextStyle(
-                    fontSize: 28,
-                    fontWeight: FontWeight.bold,
+                  classroom.inviteCode ?? 'CHƯA CÓ MÃ',
+                  style: TextStyle(
+                    fontSize: 26,
+                    fontWeight: FontWeight.w900,
                     letterSpacing: 2,
-                    color: Colors.blue,
+                    color: theme.colorScheme.primary,
                   ),
                 ),
-                const Text('Chia sẻ mã này để sinh viên tự tham gia'),
-              ],
-            ),
-            Row(
-              children: [
-                IconButton(
-                  icon: const Icon(Icons.copy, color: Colors.blue),
-                  onPressed: () {
-                    Clipboard.setData(ClipboardData(text: classroom.inviteCode));
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Đã sao chép mã mời')),
-                    );
-                  },
-                ),
-                IconButton(
-                  icon: const Icon(Icons.refresh, color: Colors.orange),
-                  onPressed: () => _confirmRegenerateCode(),
+                const SizedBox(height: 4),
+                const Text(
+                  'Chia sẻ mã mời này để sinh viên tự tham gia vào lớp',
+                  style: TextStyle(fontSize: 12, color: Colors.grey),
                 ),
               ],
             ),
-          ],
-        ),
+          ),
+          const SizedBox(width: 8),
+          // Các nút thao tác
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              IconButton(
+                padding: EdgeInsets.zero,
+                constraints: const BoxConstraints(),
+                icon: Icon(Icons.copy_rounded, color: theme.colorScheme.primary, size: 22),
+                onPressed: () {
+                  Clipboard.setData(ClipboardData(text: classroom.inviteCode ?? ''));
+                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Đã sao chép mã mời')));
+                },
+              ),
+              const SizedBox(width: 16),
+              IconButton(
+                padding: EdgeInsets.zero,
+                constraints: const BoxConstraints(),
+                icon: const Icon(Icons.autorenew_rounded, color: Colors.orange, size: 22),
+                onPressed: () => _confirmRegenerateCode(),
+              ),
+            ],
+          ),
+        ],
       ),
     );
   }
 
   Widget _buildStudentList(dynamic classroom) {
-    if (classroom.students.isEmpty) {
-      return const Card(
-        child: Padding(
-          padding: EdgeInsets.all(16),
-          child: Center(child: Text('Chưa có sinh viên nào trong lớp')),
-        ),
+    if (classroom.students == null || (classroom.students as List).isEmpty) {
+      return Container(
+        padding: const EdgeInsets.all(24),
+        decoration: BoxDecoration(color: Colors.grey.withOpacity(0.05), borderRadius: BorderRadius.circular(16)),
+        child: const Center(child: Text('Chưa có sinh viên nào trong lớp', style: TextStyle(color: Colors.grey, fontSize: 13))),
       );
     }
     return ListView.builder(
@@ -209,12 +222,17 @@ class _TeacherClassroomDetailScreenState extends ConsumerState<TeacherClassroomD
         final student = classroom.students[index];
         return Card(
           margin: const EdgeInsets.only(bottom: 8),
+          elevation: 0,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12), side: BorderSide(color: Colors.grey.withOpacity(0.1))),
           child: ListTile(
-            leading: const CircleAvatar(child: Icon(Icons.person)),
-            title: Text(student.name),
-            subtitle: Text(student.email),
+            leading: CircleAvatar(
+              backgroundColor: Colors.blue.withOpacity(0.1),
+              child: Text(student.name[0], style: const TextStyle(color: Colors.blue, fontWeight: FontWeight.bold)),
+            ),
+            title: Text(student.name, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
+            subtitle: Text(student.email, style: const TextStyle(fontSize: 12)),
             trailing: IconButton(
-              icon: const Icon(Icons.remove_circle_outline, color: Colors.red),
+              icon: const Icon(Icons.remove_circle_outline, color: Colors.red, size: 20),
               onPressed: () => _confirmRemoveStudent(student),
             ),
           ),
@@ -224,12 +242,11 @@ class _TeacherClassroomDetailScreenState extends ConsumerState<TeacherClassroomD
   }
 
   Widget _buildContestList(dynamic classroom) {
-    if (classroom.assignedContests.isEmpty) {
-      return const Card(
-        child: Padding(
-          padding: EdgeInsets.all(16),
-          child: Center(child: Text('Chưa có bài kiểm tra nào được giao cho lớp này')),
-        ),
+    if (classroom.assignedContests == null || (classroom.assignedContests as List).isEmpty) {
+      return Container(
+        padding: const EdgeInsets.all(24),
+        decoration: BoxDecoration(color: Colors.grey.withOpacity(0.05), borderRadius: BorderRadius.circular(16)),
+        child: const Center(child: Text('Chưa có bài thi nào được giao', style: TextStyle(color: Colors.grey, fontSize: 13))),
       );
     }
     return ListView.builder(
@@ -240,11 +257,17 @@ class _TeacherClassroomDetailScreenState extends ConsumerState<TeacherClassroomD
         final contest = classroom.assignedContests[index];
         return Card(
           margin: const EdgeInsets.only(bottom: 8),
+          elevation: 0,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12), side: BorderSide(color: Colors.grey.withOpacity(0.1))),
           child: ListTile(
-            leading: const Icon(Icons.quiz, color: Colors.orange),
-            title: Text(contest.name),
-            subtitle: Text('${contest.durationMinutes} phút | ${contest.computedStatus}'),
-            trailing: const Icon(Icons.chevron_right),
+            leading: Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(color: Colors.orange.withOpacity(0.1), borderRadius: BorderRadius.circular(8)),
+              child: const Icon(Icons.quiz_outlined, color: Colors.orange, size: 20),
+            ),
+            title: Text(contest.name, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
+            subtitle: Text('${contest.durationMinutes} phút | ${contest.computedStatus}', style: const TextStyle(fontSize: 11)),
+            trailing: const Icon(Icons.chevron_right, size: 18),
           ),
         );
       },
@@ -252,35 +275,32 @@ class _TeacherClassroomDetailScreenState extends ConsumerState<TeacherClassroomD
   }
 
   void _showInviteStudentsDialog(dynamic classroom) async {
-    // Sử dụng repository mới từ module Classroom
     final repo = ref.read(classroomRepositoryProvider);
     final allStudents = await repo.getAllStudents();
-    
-    // Lọc bỏ những sinh viên đã có trong lớp
-    final List<String> existingIds = List<String>.from(classroom.studentIds);
+    final List<String> existingIds = List<String>.from(classroom.studentIds ?? []);
     final availableStudents = allStudents.where((s) => !existingIds.contains(s.id)).toList();
 
     if (!mounted) return;
-
     List<String> selectedIds = [];
 
     showDialog(
       context: context,
       builder: (context) => StatefulBuilder(
         builder: (context, setDialogState) => AlertDialog(
-          title: const Text('Mời sinh viên vào lớp'),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          title: const Text('Mời sinh viên', style: TextStyle(fontWeight: FontWeight.bold)),
           content: SizedBox(
             width: double.maxFinite,
             height: 400,
             child: availableStudents.isEmpty
-                ? const Center(child: Text('Tất cả sinh viên đã có mặt trong lớp'))
+                ? const Center(child: Text('Tất cả sinh viên đã có mặt'))
                 : ListView.builder(
                     itemCount: availableStudents.length,
                     itemBuilder: (context, index) {
                       final s = availableStudents[index];
                       return CheckboxListTile(
-                        title: Text(s.name),
-                        subtitle: Text(s.email),
+                        title: Text(s.name, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500)),
+                        subtitle: Text(s.email, style: const TextStyle(fontSize: 12)),
                         value: selectedIds.contains(s.id),
                         onChanged: (val) {
                           setDialogState(() {
@@ -312,7 +332,7 @@ class _TeacherClassroomDetailScreenState extends ConsumerState<TeacherClassroomD
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Đổi mã mời?'),
-        content: const Text('Mã cũ sẽ không còn hiệu lực. Sinh viên chưa tham gia sẽ cần mã mới.'),
+        content: const Text('Mã cũ sẽ không còn hiệu lực. Sinh viên chưa tham gia sẽ cần mã mới để vào lớp.'),
         actions: [
           TextButton(onPressed: () => Navigator.pop(context), child: const Text('Hủy')),
           TextButton(
@@ -320,7 +340,7 @@ class _TeacherClassroomDetailScreenState extends ConsumerState<TeacherClassroomD
               Navigator.pop(context);
               ref.read(classroomCubitProvider.notifier).regenerateInviteCode(widget.subjectId, widget.classroomId);
             },
-            child: const Text('Đổi mã', style: TextStyle(color: Colors.orange)),
+            child: const Text('Đổi mã', style: TextStyle(color: Colors.orange, fontWeight: FontWeight.bold)),
           ),
         ],
       ),
@@ -340,7 +360,7 @@ class _TeacherClassroomDetailScreenState extends ConsumerState<TeacherClassroomD
               Navigator.pop(context);
               ref.read(classroomCubitProvider.notifier).removeStudent(widget.subjectId, widget.classroomId, student.id);
             },
-            child: const Text('Xóa', style: TextStyle(color: Colors.red)),
+            child: const Text('Xóa', style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold)),
           ),
         ],
       ),

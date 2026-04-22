@@ -99,15 +99,22 @@ class _FilterChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+    
     return ChoiceChip(
       label: Text(label),
       selected: isSelected,
       onSelected: (_) => onTap(),
       selectedColor: theme.colorScheme.primary,
+      // SỬA: Sử dụng màu chữ phù hợp với chế độ sáng/tối
       labelStyle: TextStyle(
-        color: isSelected ? Colors.white : Colors.black87,
+        color: isSelected 
+          ? Colors.white 
+          : (isDark ? Colors.white70 : Colors.black87),
         fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
       ),
+      // Cải thiện màu nền ở chế độ tối
+      backgroundColor: isDark ? Colors.white.withOpacity(0.1) : Colors.grey[200],
     );
   }
 }

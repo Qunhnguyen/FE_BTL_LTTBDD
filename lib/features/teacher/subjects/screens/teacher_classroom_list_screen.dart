@@ -7,12 +7,10 @@ import '../../../../features/classroom/presentation/cubit/classroom_state.dart';
 import '../models/subject.dart';
 import '../../../auth/models/user.dart';
 
-// Provider lấy danh sách lớp sử dụng Repository chuẩn Clean Architecture
 final classroomsProvider = FutureProvider.family<List<dynamic>, String>((ref, subjectId) {
   return ref.watch(classroomRepositoryProvider).getTeacherClassrooms(subjectId);
 });
 
-// Provider lấy danh sách sinh viên toàn hệ thống để mời
 final allStudentsProvider = FutureProvider<List<User>>((ref) {
   return ref.watch(classroomRepositoryProvider).getAllStudents();
 });
@@ -113,6 +111,7 @@ class _TeacherClassroomListScreenState extends ConsumerState<TeacherClassroomLis
   void _showAddEditClassroomDialog({dynamic classroom}) {
     showDialog(
       context: context,
+      barrierDismissible: false, // SỬA: barrierDismissBehavior -> barrierDismissible
       builder: (context) => _ClassroomDialog(
         subjectId: widget.subject.id,
         classroom: classroom,
@@ -236,7 +235,7 @@ class _ClassroomDialogState extends ConsumerState<_ClassroomDialog> {
         ),
       ),
       actions: [
-        TextButton(onPressed: () => Navigator.pop(context), child: const Text('Hủy')),
+        TextButton(onPressed: _isSaving ? null : () => Navigator.pop(context), child: const Text('Hủy')),
         ElevatedButton(
           onPressed: _isSaving ? null : _save,
           child: _isSaving ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2)) : Text(widget.classroom == null ? 'Lưu' : 'Cập nhật & Mời'),
@@ -246,32 +245,38 @@ class _ClassroomDialogState extends ConsumerState<_ClassroomDialog> {
   }
 
   void _save() async {
-    if (_nameController.text.isEmpty) {
+    final name = _nameController.text.trim();
+    if (name.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Vui lòng nhập tên lớp')));
       return;
     }
+    
     setState(() => _isSaving = true);
     try {
       final notifier = ref.read(classroomCubitProvider.notifier);
       if (widget.classroom == null) {
-        // Luồng tạo lớp mới và mời luôn
-        await notifier.createClassroom(widget.subjectId, _nameController.text, _selectedIds);
+        await notifier.createClassroom(widget.subjectId, name, _selectedIds);
       } else {
-        // Luồng cập nhật tên và mời thêm người mới
-        if (_nameController.text != widget.classroom!.name) {
-          await notifier.updateClassroom(widget.subjectId, widget.classroom!.id, name: _nameController.text);
+        if (name != widget.classroom!.name) {
+          await notifier.updateClassroom(widget.subjectId, widget.classroom!.id, name: name);
         }
         final newInvites = _selectedIds.where((id) => !_initialIds.contains(id)).toList();
         if (newInvites.isNotEmpty) {
           await notifier.sendInvites(widget.subjectId, widget.classroom!.id, newInvites);
         }
       }
-      ref.invalidate(classroomsProvider(widget.subjectId));
-      if (mounted) Navigator.pop(context);
+      
+      final finalState = ref.read(classroomCubitProvider);
+      if (finalState is! ClassroomError) {
+         ref.invalidate(classroomsProvider(widget.subjectId));
+         if (mounted) Navigator.pop(context); 
+      } else {
+         setState(() => _isSaving = false);
+      }
     } catch (e) {
       if (mounted) {
         setState(() => _isSaving = false);
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Lỗi: $e')));
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Lỗi hệ thống: $e')));
       }
     }
   }

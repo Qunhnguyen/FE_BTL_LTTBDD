@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/question.dart';
 import '../models/quiz_submission.dart';
@@ -11,7 +12,20 @@ typedef QuizState = QuizRuntimeState;
 
 final studentQuizListProvider = FutureProvider.family<List<dynamic>, String>((ref, subjectId) async {
   final repository = ref.watch(studentQuizRepositoryProvider);
-  return repository.getQuizzes(subjectId);
+  try {
+    debugPrint('DEBUG: Calling getQuizzes for subjectId: $subjectId');
+    final data = await repository.getQuizzes(subjectId);
+    debugPrint('DEBUG: Received ${data.length} quizzes from API');
+    if (data.isNotEmpty) {
+      debugPrint('DEBUG: First Quiz Data: ${data.first}');
+    } else {
+      debugPrint('DEBUG: API returned EMPTY list for subjectId: $subjectId');
+    }
+    return data;
+  } catch (e) {
+    debugPrint('DEBUG: Error fetching quizzes: $e');
+    rethrow;
+  }
 });
 
 final studentQuizDetailProvider = FutureProvider.family<Map<String, dynamic>, String>((ref, quizId) async {
@@ -99,7 +113,7 @@ class QuizRuntimeController extends StateNotifier<QuizRuntimeState> {
   QuizRuntimeController(this._repository, this._ref) : super(QuizRuntimeState());
 
   Future<void> startQuiz(String quizId) async {
-    state = QuizRuntimeState(); 
+    state = QuizRuntimeState();
     state = state.copyWith(isLoading: true);
     try {
       final submission = await _repository.startQuiz(quizId);
@@ -161,7 +175,7 @@ class QuizRuntimeController extends StateNotifier<QuizRuntimeState> {
   Future<void> usePowerUp(String type) async {
     final currentQuestionId = state.currentQuestion?.id;
     if (state.submission == null || currentQuestionId == null) return;
-    
+
     if (state.usedPowerUps.contains(type)) return;
 
     try {
@@ -169,7 +183,7 @@ class QuizRuntimeController extends StateNotifier<QuizRuntimeState> {
       print('DEBUG: Power-up response for $type: $response');
 
       final newUsed = Set<String>.from(state.usedPowerUps)..add(type);
-      
+
       if (type == 'FIFTY_FIFTY') {
         final dynamic rawKeys = response['removedOptions'];
         final List<String> disabledKeys = rawKeys != null ? List<String>.from(rawKeys) : [];
@@ -199,7 +213,7 @@ class QuizRuntimeController extends StateNotifier<QuizRuntimeState> {
   Future<void> finishQuiz() async {
     if (state.submission == null || state.isFinished) return;
     final quizId = state.submission!.quizId;
-    
+
     state = state.copyWith(isSubmitting: true);
     _timer?.cancel();
     try {
@@ -212,7 +226,7 @@ class QuizRuntimeController extends StateNotifier<QuizRuntimeState> {
         elapsedSeconds: _elapsedSeconds,
         completedAt: DateTime.now(),
       );
-      
+
       _ref.read(quizResultProvider.notifier).state = finalResult;
       _ref.read(selectedLeaderboardContestIdProvider.notifier).state = quizId;
 

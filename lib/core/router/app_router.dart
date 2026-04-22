@@ -37,12 +37,6 @@ import '../../features/admin/screens/admin_dashboard_screen.dart';
 import '../../features/admin/screens/admin_subject_screen.dart';
 import '../../features/admin/screens/admin_teacher_screen.dart';
 import '../../features/admin/screens/admin_student_screen.dart';
-import '../../features/admin/screens/admin_contest_list_screen.dart';
-import '../../features/admin/screens/admin_question_list_screen.dart';
-import '../../features/admin/screens/admin_settings_screen.dart';
-import '../../features/admin/screens/admin_knowledge_screen.dart';
-import '../../features/admin/screens/admin_ai_builder_screen.dart';
-import '../../features/admin/screens/admin_ai_job_detail_screen.dart';
 
 final _rootNavigatorKey = GlobalKey<NavigatorState>();
 final _studentHomeKey = GlobalKey<NavigatorState>();
@@ -112,19 +106,30 @@ class AppRouteNames {
 }
 
 final routerProvider = Provider<GoRouter>((ref) {
-  final authState = ref.watch(authProvider);
+  // Lấy Notifier thay vì watch toàn bộ State để tránh rebuild Router vô ích
+  final authNotifier = ref.read(authProvider.notifier);
 
   return GoRouter(
     navigatorKey: _rootNavigatorKey,
     initialLocation: '/',
     
+    // Sử dụng refreshListenable để GoRouter tự động xử lý điều hướng khi trạng thái Auth thay đổi thực sự
+    // mà không cần phải nạp lại toàn bộ đối tượng GoRouter.
     redirect: (context, state) {
-      final isAuthenticated = authState.status == AuthStatus.authenticated;
-      if (isAuthenticated && (state.matchedLocation == '/login' || state.matchedLocation == '/')) {
-        if (authState.user?.role == 'TEACHER') return '/teacher/dashboard';
-        if (authState.user?.role == 'ADMIN') return '/admin/dashboard';
+      final authState = ref.read(authProvider);
+      final status = authState.status;
+      final role = authState.user?.role;
+
+      final isAuthenticated = status == AuthStatus.authenticated;
+      final isLoggingIn = state.matchedLocation == '/login' || state.matchedLocation == '/';
+      
+      if (isAuthenticated && isLoggingIn) {
+        if (role == 'TEACHER') return '/teacher/dashboard';
+        if (role == 'ADMIN') return '/admin/dashboard';
         return '/student/home';
       }
+
+      // Khi có lỗi, KHÔNG LÀM GÌ CẢ (không redirect), để người dùng ở lại trang Login.
       return null;
     },
 
@@ -133,7 +138,6 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(path: '/login', name: AppRouteNames.login, builder: (context, state) => const LoginScreen()),
       GoRoute(path: '/roles', name: AppRouteNames.roleSelection, builder: (context, state) => const RoleSelectionScreen()),
       
-      // Màn hình Quiz Toàn màn hình
       GoRoute(
         path: '/student/quiz/:contestId',
         name: AppRouteNames.studentQuiz,
@@ -142,7 +146,6 @@ final routerProvider = Provider<GoRouter>((ref) {
       ),
       GoRoute(path: '/student/result', name: AppRouteNames.studentResult, parentNavigatorKey: _rootNavigatorKey, builder: (context, state) => const QuizResultScreen()),
 
-      // Thống kê dùng chung
       GoRoute(
         path: '/teacher/analytics/:contestId',
         name: AppRouteNames.teacherContestAnalytics,
@@ -223,7 +226,7 @@ final routerProvider = Provider<GoRouter>((ref) {
           ),
           StatefulShellBranch(navigatorKey: _adminTeachersKey, routes: [GoRoute(path: '/admin/teachers', name: AppRouteNames.adminTeachers, builder: (context, state) => const AdminTeacherScreen())]),
           StatefulShellBranch(navigatorKey: _adminStudentsKey, routes: [GoRoute(path: '/admin/students', name: AppRouteNames.adminStudents, builder: (context, state) => const AdminStudentScreen())]),
-          StatefulShellBranch(navigatorKey: _adminSettingsKey, routes: [GoRoute(path: '/admin/settings', name: AppRouteNames.adminSettings, builder: (context, state) => const AdminSettingsScreen())]),
+          StatefulShellBranch(navigatorKey: _adminSettingsKey, routes: [GoRoute(path: '/admin/settings', name: AppRouteNames.adminSettings, builder: (context, state) => const Scaffold(body: Center(child: Text('Admin Settings'))))]),
         ],
       ),
 

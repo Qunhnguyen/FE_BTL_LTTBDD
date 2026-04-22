@@ -11,7 +11,6 @@ class WelcomeScreen extends StatelessWidget {
     final isDark = theme.brightness == Brightness.dark;
 
     return Scaffold(
-      // FIX LỖI OVERFLOW: Không cho màn hình tự đẩy lên khi có bàn phím
       resizeToAvoidBottomInset: false,
       body: Stack(
         children: [
@@ -22,7 +21,6 @@ class WelcomeScreen extends StatelessWidget {
             ),
           ),
           
-          // Decorative Gradient Shapes (Giữ nguyên)
           Positioned(
             top: -MediaQuery.of(context).size.height * 0.1,
             right: -MediaQuery.of(context).size.width * 0.1,
@@ -45,7 +43,7 @@ class WelcomeScreen extends StatelessWidget {
           SafeArea(
             child: LayoutBuilder(
               builder: (context, constraints) {
-                return SingleChildScrollView( // FIX LỖI OVERFLOW: Bọc Scroll để linh hoạt kích thước
+                return SingleChildScrollView(
                   child: ConstrainedBox(
                     constraints: BoxConstraints(minHeight: constraints.maxHeight),
                     child: IntrinsicHeight(
@@ -163,21 +161,14 @@ class WelcomeScreen extends StatelessWidget {
                                       mainAxisAlignment: MainAxisAlignment.center,
                                       children: [
                                         Text('Bắt đầu ngay', style: TextStyle(fontWeight: FontWeight.bold)),
-                                        SizedBox(width: 8),
+                                        const SizedBox(width: 8),
                                         Icon(Icons.arrow_forward, size: 20),
                                       ],
                                     ),
                                   ),
                                 ),
-                                const SizedBox(height: 12),
-                                TextButton(
-                                  onPressed: () => context.pushNamed(AppRouteNames.login),
-                                  child: Text(
-                                    'Tiếp tục với tư cách Giảng viên',
-                                    style: TextStyle(color: isDark ? Colors.white70 : Colors.black54, fontWeight: FontWeight.w600),
-                                  ),
-                                ),
-                                const SizedBox(height: 16),
+                                // SỬA: Đã xóa nút "Tiếp tục với tư cách Giảng viên"
+                                const SizedBox(height: 24),
                                 Text(
                                   'Bằng việc tiếp tục, bạn đồng ý với Điều khoản sử dụng',
                                   textAlign: TextAlign.center,

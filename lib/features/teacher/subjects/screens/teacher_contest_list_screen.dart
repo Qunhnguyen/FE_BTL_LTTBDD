@@ -104,26 +104,28 @@ class _ContestsTab extends ConsumerWidget {
                       subtitle: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text('${contest.durationMinutes} phút • ${contest.description}'),
-                          const SizedBox(height: 8),
+                          // SỬA: Đã bỏ phần "số phút" theo yêu cầu
+                          Text(contest.description, maxLines: 2, overflow: TextOverflow.ellipsis),
+                          const SizedBox(height: 12),
                           Wrap(
                             spacing: 8,
+                            runSpacing: 8,
                             children: [
                               ElevatedButton.icon(
                                 onPressed: () {
-                                  // Set active contest ID before navigating
                                   ref.read(activeContestIdProvider.notifier).state = contest.id;
                                   context.pushNamed(
                                     isAdmin ? AppRouteNames.adminQuestions : AppRouteNames.teacherQuestions,
                                     pathParameters: {'subjectId': subject.id},
                                   );
                                 },
-                                icon: const Icon(Icons.quiz_outlined, size: 18),
+                                icon: const Icon(Icons.quiz_outlined, size: 16),
                                 label: const Text('Câu hỏi'),
                                 style: ElevatedButton.styleFrom(
-                                  backgroundColor: Colors.blue.shade50,
+                                  backgroundColor: Colors.blue.withOpacity(0.1),
                                   foregroundColor: Colors.blue.shade700,
                                   elevation: 0,
+                                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                                 ),
                               ),
                               OutlinedButton.icon(
@@ -133,8 +135,11 @@ class _ContestsTab extends ConsumerWidget {
                                     pathParameters: {'contestId': contest.id},
                                   );
                                 },
-                                icon: const Icon(Icons.analytics_outlined, size: 18),
+                                icon: const Icon(Icons.analytics_outlined, size: 16),
                                 label: const Text('Thống kê'),
+                                style: OutlinedButton.styleFrom(
+                                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                                ),
                               ),
                             ],
                           ),
