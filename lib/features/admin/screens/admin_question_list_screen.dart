@@ -25,6 +25,17 @@ class _AdminQuestionListScreenState extends ConsumerState<AdminQuestionListScree
   final _optionCController = TextEditingController();
   final _optionDController = TextEditingController();
   String _correctOption = 'A';
+  bool _isSaving = false;
+
+  @override
+  void dispose() {
+    _contentController.dispose();
+    _optionAController.dispose();
+    _optionBController.dispose();
+    _optionCController.dispose();
+    _optionDController.dispose();
+    super.dispose();
+  }
 
   void _showQuestionDialog({Map<String, dynamic>? question}) {
     if (question != null) {
@@ -54,16 +65,31 @@ class _AdminQuestionListScreenState extends ConsumerState<AdminQuestionListScree
               children: [
                 TextField(
                   controller: _contentController,
-                  decoration: const InputDecoration(labelText: 'Nội dung câu hỏi'),
+                  decoration: const InputDecoration(
+                    labelText: 'Nội dung câu hỏi',
+                    prefixIcon: Icon(Icons.quiz_outlined),
+                  ),
                   maxLines: 3,
                 ),
-                TextField(controller: _optionAController, decoration: const InputDecoration(labelText: 'Đáp án A')),
-                TextField(controller: _optionBController, decoration: const InputDecoration(labelText: 'Đáp án B')),
-                TextField(controller: _optionCController, decoration: const InputDecoration(labelText: 'Đáp án C')),
-                TextField(controller: _optionDController, decoration: const InputDecoration(labelText: 'Đáp án D')),
+                TextField(
+                  controller: _optionAController,
+                  decoration: const InputDecoration(labelText: 'Đáp án A'),
+                ),
+                TextField(
+                  controller: _optionBController,
+                  decoration: const InputDecoration(labelText: 'Đáp án B'),
+                ),
+                TextField(
+                  controller: _optionCController,
+                  decoration: const InputDecoration(labelText: 'Đáp án C'),
+                ),
+                TextField(
+                  controller: _optionDController,
+                  decoration: const InputDecoration(labelText: 'Đáp án D'),
+                ),
                 const SizedBox(height: 16),
                 DropdownButtonFormField<String>(
-                  value: _correctOption,
+                  initialValue: _correctOption,
                   decoration: const InputDecoration(labelText: 'Đáp án đúng'),
                   items: ['A', 'B', 'C', 'D'].map((opt) => DropdownMenuItem(value: opt, child: Text('Đáp án $opt'))).toList(),
                   onChanged: (val) => setDialogState(() => _correctOption = val!),
@@ -74,32 +100,44 @@ class _AdminQuestionListScreenState extends ConsumerState<AdminQuestionListScree
           actions: [
             TextButton(onPressed: () => Navigator.pop(context), child: const Text('Hủy')),
             ElevatedButton(
-              onPressed: () async {
+              onPressed: _isSaving ? null : () async {
+                if (_contentController.text.trim().isEmpty) {
+                  return;
+                }
+                setState(() => _isSaving = true);
                 final data = {
                   'contestId': widget.contestId,
-                  'content': _contentController.text,
-                  'optionA': _optionAController.text,
-                  'optionB': _optionBController.text,
-                  'optionC': _optionCController.text,
-                  'optionD': _optionDController.text,
+                  'content': _contentController.text.trim(),
+                  'optionA': _optionAController.text.trim(),
+                  'optionB': _optionBController.text.trim(),
+                  'optionC': _optionCController.text.trim(),
+                  'optionD': _optionDController.text.trim(),
                   'correctOption': _correctOption,
                   'questionNo': question?['questionNo'] ?? 1,
                   'level': question?['level'] ?? 'MEDIUM',
                   'score': question?['score'] ?? 1.0,
                 };
 
-                if (question == null) {
-                  await ref.read(adminRepositoryProvider).createQuestion(data);
-                } else {
-                  await ref.read(adminRepositoryProvider).updateQuestion(question['id'].toString(), data);
-                }
+                try {
+                  if (question == null) {
+                    await ref.read(adminRepositoryProvider).createQuestion(data);
+                  } else {
+                    await ref.read(adminRepositoryProvider).updateQuestion(question['id'].toString(), data);
+                  }
 
-                if (mounted) {
+                  if (!context.mounted) return;
                   Navigator.pop(context);
                   setState(() {});
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text(question == null ? 'Đã thêm câu hỏi' : 'Đã cập nhật câu hỏi')),
+                  );
+                } finally {
+                  if (mounted) {
+                    setState(() => _isSaving = false);
+                  }
                 }
               },
-              child: Text(question == null ? 'Thêm' : 'Cập nhật'),
+              child: Text(_isSaving ? 'Đang lưu...' : question == null ? 'Thêm' : 'Cập nhật'),
             ),
           ],
         ),
@@ -108,13 +146,13 @@ class _AdminQuestionListScreenState extends ConsumerState<AdminQuestionListScree
   }
 
   Future<void> _importCsv() async {
-    FilePickerResult? result = await FilePicker.platform.pickFiles(
+    final result = await FilePicker.platform.pickFiles(
       type: FileType.custom,
       allowedExtensions: ['csv'],
     );
 
     if (result != null) {
-      File file = File(result.files.single.path!);
+      final file = File(result.files.single.path!);
       try {
         await ref.read(adminRepositoryProvider).importQuestionsCsv(widget.contestId, file, true);
         if (mounted) {
@@ -178,6 +216,7 @@ class _AdminQuestionListScreenState extends ConsumerState<AdminQuestionListScree
     return Scaffold(
       appBar: AppBar(
         title: Text('Câu hỏi: ${widget.contestName}'),
+        centerTitle: true,
         actions: [
           PopupMenuButton<String>(
             onSelected: (val) {
@@ -198,13 +237,25 @@ class _AdminQuestionListScreenState extends ConsumerState<AdminQuestionListScree
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) return const Center(child: CircularProgressIndicator());
           final questions = snapshot.data ?? [];
-          if (questions.isEmpty) return const Center(child: Text('Chưa có câu hỏi nào'));
+          if (questions.isEmpty) {
+            return const Center(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.help_outline, size: 50, color: Colors.grey),
+                  SizedBox(height: 8),
+                  Text('Chưa có câu hỏi nào'),
+                ],
+              ),
+            );
+          }
           return ListView.builder(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
             itemCount: questions.length,
             itemBuilder: (context, index) {
               final q = questions[index];
               return Card(
-                margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                margin: const EdgeInsets.only(bottom: 10),
                 child: ExpansionTile(
                   leading: CircleAvatar(child: Text((index + 1).toString())),
                   title: Text(q['content'] ?? '', maxLines: 2, overflow: TextOverflow.ellipsis),

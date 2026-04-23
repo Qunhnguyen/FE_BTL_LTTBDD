@@ -37,6 +37,12 @@ import '../../features/admin/screens/admin_dashboard_screen.dart';
 import '../../features/admin/screens/admin_subject_screen.dart';
 import '../../features/admin/screens/admin_teacher_screen.dart';
 import '../../features/admin/screens/admin_student_screen.dart';
+import '../../features/admin/screens/admin_settings_screen.dart';
+import '../../features/admin/screens/admin_contest_list_screen.dart';
+import '../../features/admin/screens/admin_question_list_screen.dart';
+import '../../features/admin/screens/admin_knowledge_screen.dart';
+import '../../features/admin/screens/admin_ai_builder_screen.dart';
+import '../../features/admin/screens/admin_ai_job_detail_screen.dart';
 
 final _rootNavigatorKey = GlobalKey<NavigatorState>();
 final _studentHomeKey = GlobalKey<NavigatorState>();
@@ -106,9 +112,6 @@ class AppRouteNames {
 }
 
 final routerProvider = Provider<GoRouter>((ref) {
-  // Lấy Notifier thay vì watch toàn bộ State để tránh rebuild Router vô ích
-  final authNotifier = ref.read(authProvider.notifier);
-
   return GoRouter(
     navigatorKey: _rootNavigatorKey,
     initialLocation: '/',
@@ -200,25 +203,42 @@ final routerProvider = Provider<GoRouter>((ref) {
                     builder: (context, state) {
                       final subjectId = state.pathParameters['subjectId']!;
                       final name = state.uri.queryParameters['name'] ?? 'Môn học';
-                      return TeacherContestListScreen(subject: Subject(id: subjectId, name: name));
+                      return AdminContestListScreen(
+                        subjectId: subjectId,
+                        subjectName: name,
+                      );
                     },
                     routes: [
                       GoRoute(
-                        path: 'questions',
+                        path: ':contestId/questions',
                         name: AppRouteNames.adminQuestions,
-                        builder: (context, state) => QuestionManagementScreen(
-                          subjectId: state.pathParameters['subjectId'],
-                          csvImportRouteName: AppRouteNames.adminCsvImport,
-                          subjectsRouteName: AppRouteNames.adminSubjects,
+                        builder: (context, state) => AdminQuestionListScreen(
+                          contestId: state.pathParameters['contestId']!,
+                          contestName: state.uri.queryParameters['name'] ?? 'Kỳ thi',
                         ),
-                        routes: [
-                          GoRoute(path: 'import-csv', name: AppRouteNames.adminCsvImport, builder: (context, state) => const CsvImportScreen()),
-                        ],
                       ),
-                      GoRoute(path: 'knowledge', name: AppRouteNames.adminKnowledge, builder: (context, state) => KnowledgeManagementScreen(subjectId: state.pathParameters['subjectId']!)),
-                      GoRoute(path: 'ai-builder', name: AppRouteNames.adminAiBuilder, builder: (context, state) => AiBuilderScreen(subjectId: state.pathParameters['subjectId']!)),
-                      GoRoute(path: 'ai-jobs/:jobId', name: AppRouteNames.adminAiJobDetail, builder: (context, state) => AiJobDetailScreen(subjectId: state.pathParameters['subjectId']!, jobId: state.pathParameters['jobId']!)),
                     ],
+                  ),
+                  GoRoute(
+                    path: ':subjectId/knowledge',
+                    name: AppRouteNames.adminKnowledge,
+                    builder: (context, state) => AdminKnowledgeScreen(
+                      subjectId: state.pathParameters['subjectId']!,
+                      subjectName: state.uri.queryParameters['name'] ?? 'Môn học',
+                    ),
+                  ),
+                  GoRoute(
+                    path: ':subjectId/ai-builder',
+                    name: AppRouteNames.adminAiBuilder,
+                    builder: (context, state) => AdminAiBuilderScreen(subjectId: state.pathParameters['subjectId']!),
+                  ),
+                  GoRoute(
+                    path: ':subjectId/ai-jobs/:jobId',
+                    name: AppRouteNames.adminAiJobDetail,
+                    builder: (context, state) => AdminAiJobDetailScreen(
+                      subjectId: state.pathParameters['subjectId']!,
+                      jobId: state.pathParameters['jobId']!,
+                    ),
                   ),
                 ],
               ),
@@ -226,7 +246,16 @@ final routerProvider = Provider<GoRouter>((ref) {
           ),
           StatefulShellBranch(navigatorKey: _adminTeachersKey, routes: [GoRoute(path: '/admin/teachers', name: AppRouteNames.adminTeachers, builder: (context, state) => const AdminTeacherScreen())]),
           StatefulShellBranch(navigatorKey: _adminStudentsKey, routes: [GoRoute(path: '/admin/students', name: AppRouteNames.adminStudents, builder: (context, state) => const AdminStudentScreen())]),
-          StatefulShellBranch(navigatorKey: _adminSettingsKey, routes: [GoRoute(path: '/admin/settings', name: AppRouteNames.adminSettings, builder: (context, state) => const Scaffold(body: Center(child: Text('Admin Settings'))))]),
+          StatefulShellBranch(
+            navigatorKey: _adminSettingsKey,
+            routes: [
+              GoRoute(
+                path: '/admin/settings',
+                name: AppRouteNames.adminSettings,
+                builder: (context, state) => const AdminSettingsScreen(),
+              ),
+            ],
+          ),
         ],
       ),
 

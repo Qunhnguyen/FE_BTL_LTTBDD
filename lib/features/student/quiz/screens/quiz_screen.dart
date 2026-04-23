@@ -291,8 +291,13 @@ class _AnswersList extends StatelessWidget {
   Widget build(BuildContext context) {
     return Column(
       children: question.options.map((option) {
-        final isSelected = selectedAnswerKey == option.key;
-        final isDisabled = disabledKeys.contains(option.key);
+        final normalizedOptionKey = option.key.trim().toUpperCase();
+        final normalizedSelectedKey = selectedAnswerKey?.trim().toUpperCase();
+        final normalizedCorrectKey = correctKey?.trim().toUpperCase();
+        final normalizedDisabledKeys = disabledKeys.map((k) => k.trim().toUpperCase()).toSet();
+
+        final isSelected = normalizedSelectedKey == normalizedOptionKey;
+        final isDisabled = normalizedDisabledKeys.contains(normalizedOptionKey);
         
         Color borderColor = Colors.grey.shade200;
         Color? bgColor;
@@ -308,7 +313,7 @@ class _AnswersList extends StatelessWidget {
             borderColor = Colors.blue;
             bgColor = Colors.blue.withOpacity(0.05);
           }
-        } else if (isCorrect == false && option.key == correctKey) {
+        } else if (isCorrect == false && normalizedOptionKey == normalizedCorrectKey) {
           borderColor = Colors.green.withOpacity(0.3);
         }
 
