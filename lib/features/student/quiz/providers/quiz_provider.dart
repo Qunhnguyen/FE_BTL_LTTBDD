@@ -142,20 +142,73 @@ class QuizRuntimeController extends StateNotifier<QuizRuntimeState> {
     });
   }
 
+  bool _parseIsCorrect(dynamic value) {
+    if (value is bool) return value;
+    if (value is num) return value != 0;
+    if (value is String) {
+      final normalized = value.trim().toLowerCase();
+      if (normalized == 'true' || normalized == '1' || normalized == 'correct') {
+        return true;
+      }
+      if (normalized == 'false' || normalized == '0' || normalized == 'wrong') {
+        return false;
+      }
+    }
+    return false;
+  }
+
+  String _normalizeOptionKey(dynamic value) {
+    if (value == null) return '';
+    return value.toString().trim().toUpperCase();
+  }
+
+  String _extractCorrectOption(Map<String, dynamic> response) {
+    final directKeys = [
+      response['correctOption'],
+      response['correctAnswer'],
+      response['answer'],
+    ];
+
+    for (final candidate in directKeys) {
+      final key = _normalizeOptionKey(candidate);
+      if (key.isNotEmpty) return key;
+    }
+
+    final nestedData = response['data'];
+    if (nestedData is Map<String, dynamic>) {
+      final nestedKeys = [
+        nestedData['correctOption'],
+        nestedData['correctAnswer'],
+        nestedData['answer'],
+      ];
+      for (final candidate in nestedKeys) {
+        final key = _normalizeOptionKey(candidate);
+        if (key.isNotEmpty) return key;
+      }
+    }
+
+    return '';
+  }
+
   Future<void> selectAnswer(String questionId, String optionKey) async {
     if (state.submission == null) return;
     if (state.isCorrectMap.containsKey(questionId)) return;
 
     final newAnswers = Map<String, String>.from(state.selectedAnswers);
-    newAnswers[questionId] = optionKey;
+    final normalizedSelectedOption = _normalizeOptionKey(optionKey);
+    newAnswers[questionId] = normalizedSelectedOption;
     state = state.copyWith(selectedAnswers: newAnswers);
 
     try {
-      final response = await _repository.submitAnswer(state.submission!.submissionId, questionId, optionKey);
+      final response = await _repository.submitAnswer(
+        state.submission!.submissionId,
+        questionId,
+        normalizedSelectedOption,
+      );
       final newIsCorrectMap = Map<String, bool>.from(state.isCorrectMap);
       final newCorrectOptionMap = Map<String, String>.from(state.correctOptionMap);
-      newIsCorrectMap[questionId] = response['isCorrect'] ?? false;
-      newCorrectOptionMap[questionId] = response['correctOption'] ?? '';
+      newIsCorrectMap[questionId] = _parseIsCorrect(response['isCorrect']);
+      newCorrectOptionMap[questionId] = _extractCorrectOption(response);
       state = state.copyWith(isCorrectMap: newIsCorrectMap, correctOptionMap: newCorrectOptionMap);
     } catch (e) {}
   }
