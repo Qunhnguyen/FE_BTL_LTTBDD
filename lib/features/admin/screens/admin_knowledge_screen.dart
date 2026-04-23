@@ -17,13 +17,22 @@ class AdminKnowledgeScreen extends ConsumerStatefulWidget {
 class _AdminKnowledgeScreenState extends ConsumerState<AdminKnowledgeScreen> {
   final _titleController = TextEditingController();
   final _contentController = TextEditingController();
+  bool _isSubmitting = false;
+
+  @override
+  void dispose() {
+    _titleController.dispose();
+    _contentController.dispose();
+    super.dispose();
+  }
 
   void _ingestText() async {
     if (_titleController.text.isEmpty || _contentController.text.isEmpty) return;
+    setState(() => _isSubmitting = true);
     try {
       await ref.read(adminRepositoryProvider).ingestKnowledgeText(widget.subjectId, {
-        'title': _titleController.text,
-        'content': _contentController.text,
+        'title': _titleController.text.trim(),
+        'content': _contentController.text.trim(),
         'sourceType': 'MANUAL',
       });
       if (mounted) {
@@ -33,14 +42,18 @@ class _AdminKnowledgeScreenState extends ConsumerState<AdminKnowledgeScreen> {
       }
     } catch (e) {
       if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Lỗi: $e')));
+    } finally {
+      if (mounted) {
+        setState(() => _isSubmitting = false);
+      }
     }
   }
 
   Future<void> _ingestFile() async {
     try {
-      FilePickerResult? result = await FilePicker.platform.pickFiles();
+      final result = await FilePicker.platform.pickFiles();
       if (result != null) {
-        File file = File(result.files.single.path!);
+        final file = File(result.files.single.path!);
         await ref.read(adminRepositoryProvider).ingestKnowledgeFile(
           widget.subjectId, file, 'Tài liệu: ${widget.subjectName}', 'FILE', null
         );
@@ -53,13 +66,37 @@ class _AdminKnowledgeScreenState extends ConsumerState<AdminKnowledgeScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final primary = Theme.of(context).colorScheme.primary;
     return Scaffold(
-      appBar: AppBar(title: Text('AI Knowledge: ${widget.subjectName}')),
+      appBar: AppBar(
+        title: Text('Kho kiến thức: ${widget.subjectName}'),
+        centerTitle: true,
+      ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
+            Container(
+              padding: const EdgeInsets.all(14),
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(14),
+                color: primary.withValues(alpha: 0.08),
+                border: Border.all(color: primary.withValues(alpha: 0.18)),
+              ),
+              child: const Row(
+                children: [
+                  Icon(Icons.psychology_outlined),
+                  SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      'Nạp dữ liệu kiến thức để AI sinh đề sát nội dung môn học.',
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 14),
             Card(
               child: Padding(
                 padding: const EdgeInsets.all(16),
@@ -73,7 +110,10 @@ class _AdminKnowledgeScreenState extends ConsumerState<AdminKnowledgeScreen> {
                     const SizedBox(height: 16),
                     SizedBox(
                       width: double.infinity,
-                      child: ElevatedButton(onPressed: _ingestText, child: const Text('Gửi kiến thức')),
+                      child: ElevatedButton(
+                        onPressed: _isSubmitting ? null : _ingestText,
+                        child: Text(_isSubmitting ? 'Đang gửi...' : 'Gửi kiến thức'),
+                      ),
                     ),
                   ],
                 ),

@@ -13,10 +13,15 @@ class AdminAiJobDetailScreen extends ConsumerStatefulWidget {
 }
 
 class _AdminAiJobDetailScreenState extends ConsumerState<AdminAiJobDetailScreen> {
+  bool _isApproving = false;
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Chi tiết Job AI')),
+      appBar: AppBar(
+        title: const Text('Chi tiết Job AI'),
+        centerTitle: true,
+      ),
       body: FutureBuilder<dynamic>(
         future: ref.watch(adminRepositoryProvider).getAiJobDetail(widget.subjectId, widget.jobId),
         builder: (context, snapshot) {
@@ -37,18 +42,35 @@ class _AdminAiJobDetailScreenState extends ConsumerState<AdminAiJobDetailScreen>
                     Text('Trạng thái: $status', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
                     if (status == 'COMPLETED')
                       ElevatedButton(
-                        onPressed: () async {
-                          await ref.read(adminRepositoryProvider).approveAiExam(widget.subjectId, widget.jobId);
-                          if (mounted) {
+                        onPressed: _isApproving ? null : () async {
+                          setState(() => _isApproving = true);
+                          try {
+                            await ref.read(adminRepositoryProvider).approveAiExam(widget.subjectId, widget.jobId);
+                            if (!context.mounted) return;
                             ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Đã phê duyệt và thêm câu hỏi vào kỳ thi')));
                             Navigator.pop(context);
+                          } finally {
+                            if (mounted) {
+                              setState(() => _isApproving = false);
+                            }
                           }
                         },
-                        child: const Text('PHÊ DUYỆT'),
+                        child: Text(_isApproving ? 'Đang phê duyệt...' : 'PHÊ DUYỆT'),
                       ),
                   ],
                 ),
               ),
+              if (questions.isEmpty)
+                const Padding(
+                  padding: EdgeInsets.only(top: 80),
+                  child: Column(
+                    children: [
+                      Icon(Icons.pending_actions_outlined, size: 48, color: Colors.grey),
+                      SizedBox(height: 8),
+                      Text('Chưa có câu hỏi được sinh'),
+                    ],
+                  ),
+                ),
               Expanded(
                 child: ListView.builder(
                   itemCount: questions.length,
