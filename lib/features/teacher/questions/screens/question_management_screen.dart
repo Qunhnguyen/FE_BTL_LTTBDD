@@ -25,13 +25,23 @@ class QuestionManagementScreen extends ConsumerStatefulWidget {
 }
 
 class _QuestionManagementScreenState extends ConsumerState<QuestionManagementScreen> {
+  final TextEditingController _searchController = TextEditingController();
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
     final contestId = ref.watch(activeContestIdProvider);
+    final allQuestionsAsync = ref.watch(managedQuestionsProvider);
     final questionsAsync = ref.watch(filteredManagedQuestionsProvider);
     final currentFilter = ref.watch(questionFilterProvider);
+    final searchQuery = ref.watch(questionSearchQueryProvider);
 
     if (contestId == null) {
       return _buildNoContestSelected(theme);
@@ -69,9 +79,20 @@ class _QuestionManagementScreenState extends ConsumerState<QuestionManagementScr
                 children: [
                   Expanded(
                     child: TextField(
+                      controller: _searchController,
+                      onChanged: (value) => ref.read(questionSearchQueryProvider.notifier).state = value,
                       decoration: InputDecoration(
                         hintText: 'Tìm kiếm câu hỏi...',
                         prefixIcon: const Icon(Icons.search),
+                        suffixIcon: searchQuery.trim().isEmpty
+                            ? null
+                            : IconButton(
+                                icon: const Icon(Icons.clear),
+                                onPressed: () {
+                                  _searchController.clear();
+                                  ref.read(questionSearchQueryProvider.notifier).state = '';
+                                },
+                              ),
                         filled: true,
                         fillColor: isDark ? Colors.white10 : Colors.grey[100],
                         border: OutlineInputBorder(
@@ -121,51 +142,28 @@ class _QuestionManagementScreenState extends ConsumerState<QuestionManagementScr
             ),
             Expanded(
               child: questionsAsync.when(
-                data: (questions) => questions.isEmpty
-                    ? Center(
-                        child: Padding(
-                          padding: const EdgeInsets.all(40),
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Container(
-                                padding: const EdgeInsets.all(24),
-                                decoration: BoxDecoration(
-                                  color: theme.colorScheme.primary.withValues(alpha: 0.08),
-                                  shape: BoxShape.circle,
-                                ),
-                                child: Icon(Icons.quiz_outlined, size: 56, color: theme.colorScheme.primary.withValues(alpha: 0.4)),
-                              ),
-                              const SizedBox(height: 20),
-                              const Text('Chưa có câu hỏi nào', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 17)),
-                              const SizedBox(height: 8),
-                              const Text(
-                                'Thêm câu hỏi hoặc import từ CSV\nđể bắt đầu xây dựng đề thi.',
-                                textAlign: TextAlign.center,
-                                style: TextStyle(color: Colors.grey, fontSize: 13, height: 1.5),
-                              ),
-                              const SizedBox(height: 20),
-                              Row(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  ElevatedButton.icon(
-                                    onPressed: () => _showAddQuestionDialog(context, ref, contestId),
-                                    icon: const Icon(Icons.add),
-                                    label: const Text('Thêm thủ công'),
-                                  ),
-                                  const SizedBox(width: 12),
-                                  OutlinedButton.icon(
-                                    onPressed: () => _openCsvImport(context),
-                                    icon: const Icon(Icons.upload_file),
-                                    label: const Text('Import CSV'),
-                                  ),
-                                ],
-                              ),
-                            ],
-                          ),
-                        ),
-                      )
-                    : ListView.builder(
+                data: (questions) {
+                  final allQuestions = allQuestionsAsync.valueOrNull ?? const <ManagedQuestion>[];
+                  final hasActiveSearch = searchQuery.trim().isNotEmpty;
+                  final hasActiveDifficulty = currentFilter != null;
+
+                  if (questions.isEmpty) {
+                    if (allQuestions.isEmpty) {
+                      return _buildNoQuestionsState(context, ref, contestId);
+                    }
+                    return _buildNoFilteredResultState(
+                      theme,
+                      hasActiveSearch: hasActiveSearch,
+                      hasActiveDifficulty: hasActiveDifficulty,
+                      onClear: () {
+                        _searchController.clear();
+                        ref.read(questionSearchQueryProvider.notifier).state = '';
+                        ref.read(questionFilterProvider.notifier).state = null;
+                      },
+                    );
+                  }
+
+                  return ListView.builder(
                         padding: const EdgeInsets.fromLTRB(16, 16, 16, 80),
                         itemCount: questions.length,
                         itemBuilder: (context, index) {
@@ -182,10 +180,97 @@ class _QuestionManagementScreenState extends ConsumerState<QuestionManagementScr
                             ),
                           );
                         },
-                      ),
+                      );
+                },
                 loading: () => const Center(child: CircularProgressIndicator()),
                 error: (err, stack) => Center(child: Text('Lỗi: $err')),
               ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildNoQuestionsState(BuildContext context, WidgetRef ref, String contestId) {
+    final theme = Theme.of(context);
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(40),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(24),
+              decoration: BoxDecoration(
+                color: theme.colorScheme.primary.withValues(alpha: 0.08),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(Icons.quiz_outlined, size: 56, color: theme.colorScheme.primary.withValues(alpha: 0.4)),
+            ),
+            const SizedBox(height: 20),
+            const Text('Chưa có câu hỏi nào', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 17)),
+            const SizedBox(height: 8),
+            const Text(
+              'Thêm câu hỏi hoặc import từ CSV\nđể bắt đầu xây dựng đề thi.',
+              textAlign: TextAlign.center,
+              style: TextStyle(color: Colors.grey, fontSize: 13, height: 1.5),
+            ),
+            const SizedBox(height: 20),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                ElevatedButton.icon(
+                  onPressed: () => _showAddQuestionDialog(context, ref, contestId),
+                  icon: const Icon(Icons.add),
+                  label: const Text('Thêm thủ công'),
+                ),
+                const SizedBox(width: 12),
+                OutlinedButton.icon(
+                  onPressed: () => _openCsvImport(context),
+                  icon: const Icon(Icons.upload_file),
+                  label: const Text('Import CSV'),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildNoFilteredResultState(
+    ThemeData theme, {
+    required bool hasActiveSearch,
+    required bool hasActiveDifficulty,
+    required VoidCallback onClear,
+  }) {
+    final subtitle = hasActiveSearch && hasActiveDifficulty
+        ? 'Không có câu hỏi phù hợp với từ khóa và độ khó đã chọn.'
+        : hasActiveSearch
+            ? 'Không tìm thấy câu hỏi phù hợp với từ khóa bạn nhập.'
+            : 'Không có câu hỏi nào ở mức độ khó đã chọn.';
+
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(32),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.search_off_rounded, size: 60, color: Colors.grey.shade400),
+            const SizedBox(height: 12),
+            const Text('Không có kết quả', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+            const SizedBox(height: 8),
+            Text(
+              subtitle,
+              textAlign: TextAlign.center,
+              style: const TextStyle(color: Colors.grey),
+            ),
+            const SizedBox(height: 16),
+            OutlinedButton.icon(
+              onPressed: onClear,
+              icon: const Icon(Icons.filter_alt_off_outlined),
+              label: const Text('Xóa bộ lọc'),
             ),
           ],
         ),
@@ -449,7 +534,7 @@ class _QuestionManagementScreenState extends ConsumerState<QuestionManagementScr
                                 'points': pts,
                                 'duration': dur,
                                 'durationSeconds': dur,
-                                'difficulty': difficulty.name.toUpperCase(),
+                                'level': difficulty.name.toUpperCase(),
                                 'type': 'MULTIPLE_CHOICE',
                               });
                               ref.refresh(managedQuestionsProvider);
@@ -664,7 +749,7 @@ class _QuestionManagementScreenState extends ConsumerState<QuestionManagementScr
                                 'points': pts,
                                 'duration': dur,
                                 'durationSeconds': dur,
-                                'difficulty': difficulty.name.toUpperCase(),
+                                'level': difficulty.name.toUpperCase(),
                                 'type': 'MULTIPLE_CHOICE',
                               });
                               ref.refresh(managedQuestionsProvider);

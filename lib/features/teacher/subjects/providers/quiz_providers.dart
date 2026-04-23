@@ -18,10 +18,12 @@ class QuizActionsController extends StateNotifier<AsyncValue<void>> {
 
   QuizActionsController(this._repository, this._ref) : super(const AsyncValue.data(null));
 
-  Future<void> createQuiz(String subjectId, Map<String, dynamic> data) async {
+  Future<Quiz> createQuiz(String subjectId, Map<String, dynamic> data) async {
     state = const AsyncValue.loading();
-    state = await AsyncValue.guard(() => _repository.createQuiz(subjectId, data));
+    final result = await AsyncValue.guard(() => _repository.createQuiz(subjectId, data));
+    state = result.whenData((_) => null);
     _ref.invalidate(quizListProvider(subjectId));
+    return result.requireValue;
   }
 
   Future<void> updateQuiz(String subjectId, String quizId, Map<String, dynamic> data) async {

@@ -16,14 +16,36 @@ final managedQuestionsProvider = FutureProvider<List<ManagedQuestion>>((ref) asy
 
 // Provider quản lý bộ lọc độ khó
 final questionFilterProvider = StateProvider<QuestionDifficulty?>((ref) => null);
+final questionSearchQueryProvider = StateProvider<String>((ref) => '');
 
 // Provider trả về danh sách đã được lọc
 final filteredManagedQuestionsProvider = Provider<AsyncValue<List<ManagedQuestion>>>((ref) {
   final questionsAsync = ref.watch(managedQuestionsProvider);
   final filter = ref.watch(questionFilterProvider);
+  final query = ref.watch(questionSearchQueryProvider).trim().toLowerCase();
 
   return questionsAsync.whenData((questions) {
-    if (filter == null) return questions;
-    return questions.where((q) => q.difficulty == filter).toList();
+    return questions.where((q) {
+      final matchesDifficulty = filter == null || q.difficulty == filter;
+      if (!matchesDifficulty) return false;
+
+      if (query.isEmpty) return true;
+
+      final text = q.text.toLowerCase();
+      final optionA = (q.optionA ?? '').toLowerCase();
+      final optionB = (q.optionB ?? '').toLowerCase();
+      final optionC = (q.optionC ?? '').toLowerCase();
+      final optionD = (q.optionD ?? '').toLowerCase();
+      final correctOption = (q.correctOption ?? '').toLowerCase();
+      final difficulty = q.difficulty.name.toLowerCase();
+
+      return text.contains(query) ||
+          optionA.contains(query) ||
+          optionB.contains(query) ||
+          optionC.contains(query) ||
+          optionD.contains(query) ||
+          correctOption.contains(query) ||
+          difficulty.contains(query);
+    }).toList();
   });
 });

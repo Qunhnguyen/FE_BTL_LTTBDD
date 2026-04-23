@@ -17,6 +17,13 @@ class StudentClassroomDetailScreen extends ConsumerStatefulWidget {
 
 class _StudentClassroomDetailScreenState extends ConsumerState<StudentClassroomDetailScreen> {
   ClassroomResponse? _classroom;
+  late Future<List<Map<String, dynamic>>> _classroomQuizzesFuture;
+
+  void _reloadClassroomQuizzes() {
+    setState(() {
+      _classroomQuizzesFuture = ref.read(classroomRepositoryProvider).getStudentClassroomQuizzes(widget.classroomId);
+    });
+  }
 
   @override
   void initState() {
@@ -33,6 +40,7 @@ class _StudentClassroomDetailScreenState extends ConsumerState<StudentClassroomD
         }
       }
     });
+    _reloadClassroomQuizzes();
   }
 
   @override
@@ -46,8 +54,6 @@ class _StudentClassroomDetailScreenState extends ConsumerState<StudentClassroomD
         body: const Center(child: CircularProgressIndicator()),
       );
     }
-
-    final contests = _classroom!.assignedContests ?? [];
 
     return Scaffold(
       appBar: AppBar(
@@ -108,10 +114,39 @@ class _StudentClassroomDetailScreenState extends ConsumerState<StudentClassroomD
             const SizedBox(height: 16),
 
             // DANH SÁCH BÀI THI THẬT
-            if (contests.isEmpty)
-              _buildEmptyContests(theme)
-            else
-              ...contests.map((contest) => _buildContestTile(contest, theme, isDark)),
+            FutureBuilder<List<Map<String, dynamic>>>(
+              future: _classroomQuizzesFuture,
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return const Padding(
+                    padding: EdgeInsets.symmetric(vertical: 24),
+                    child: Center(child: CircularProgressIndicator()),
+                  );
+                }
+                if (snapshot.hasError) {
+                  return Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: Colors.red.withOpacity(0.08),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Text(
+                      'Lỗi tải danh sách quiz: ${snapshot.error}',
+                      style: const TextStyle(color: Colors.red),
+                    ),
+                  );
+                }
+
+                final quizzes = snapshot.data ?? [];
+                if (quizzes.isEmpty) {
+                  return _buildEmptyContests(theme);
+                }
+                return Column(
+                  children: quizzes.map((quiz) => _buildQuizTile(quiz, theme, isDark)).toList(),
+                );
+              },
+            ),
 
             const SizedBox(height: 32),
             SizedBox(
@@ -132,7 +167,12 @@ class _StudentClassroomDetailScreenState extends ConsumerState<StudentClassroomD
     );
   }
 
-  Widget _buildContestTile(AssignedContestResponse contest, ThemeData theme, bool isDark) {
+  Widget _buildQuizTile(Map<String, dynamic> quiz, ThemeData theme, bool isDark) {
+    final duration = quiz['durationMinutes'] ?? 0;
+    final status = (quiz['status'] ?? 'PUBLISHED').toString();
+    final attempts = quiz['remainingAttempts'];
+    final subtitleAttempts = attempts == null ? 'Không giới hạn lượt' : 'Lượt còn lại: $attempts';
+
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
@@ -147,14 +187,16 @@ class _StudentClassroomDetailScreenState extends ConsumerState<StudentClassroomD
           decoration: BoxDecoration(color: Colors.orange.withOpacity(0.1), borderRadius: BorderRadius.circular(12)),
           child: const Icon(Icons.quiz_rounded, color: Colors.orange),
         ),
-        title: Text(contest.name, style: const TextStyle(fontWeight: FontWeight.bold)),
+        title: Text((quiz['name'] ?? 'Quiz').toString(), style: const TextStyle(fontWeight: FontWeight.bold)),
         subtitle: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const SizedBox(height: 4),
-            Text('Thời gian: ${contest.durationMinutes} phút'),
+            Text('Thời gian: $duration phút'),
             const SizedBox(height: 2),
-            Text('Trạng thái: ${contest.computedStatus ?? "Đang diễn ra"}', style: TextStyle(color: theme.colorScheme.primary, fontSize: 12, fontWeight: FontWeight.w500)),
+            Text('Trạng thái: $status', style: TextStyle(color: theme.colorScheme.primary, fontSize: 12, fontWeight: FontWeight.w500)),
+            const SizedBox(height: 2),
+            Text(subtitleAttempts, style: const TextStyle(fontSize: 12)),
           ],
         ),
         trailing: const Icon(Icons.arrow_forward_ios_rounded, size: 16),
@@ -162,8 +204,8 @@ class _StudentClassroomDetailScreenState extends ConsumerState<StudentClassroomD
           // Điều hướng trực tiếp đến bài thi
           context.pushNamed(
             AppRouteNames.studentQuiz,
-            pathParameters: {'contestId': contest.id},
-          );
+            pathParameters: {'contestId': (quiz['id'] ?? '').toString()},
+          ).then((_) => _reloadClassroomQuizzes());
         },
       ),
     );

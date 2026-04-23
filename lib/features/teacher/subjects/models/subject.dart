@@ -2,11 +2,13 @@ class Subject {
   final String id;
   final String name;
   final String? description;
+  final bool? isPublic;
 
   Subject({
     required this.id,
     required this.name,
     this.description,
+    this.isPublic,
   });
 
   factory Subject.fromJson(Map<String, dynamic> json) {
@@ -15,6 +17,7 @@ class Subject {
       id: (json['id'] ?? json['_id'])?.toString() ?? '',
       name: json['name'] ?? '',
       description: json['description'],
+      isPublic: json['isPublic'] as bool?,
     );
   }
 
@@ -22,6 +25,7 @@ class Subject {
     return {
       'name': name,
       'description': description,
+      'isPublic': isPublic,
     };
   }
 }

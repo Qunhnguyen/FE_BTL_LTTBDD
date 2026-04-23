@@ -48,7 +48,8 @@ class AuthRepository {
     if (token == null || token.isEmpty) return null;
 
     try {
-      final response = await _apiClient.get('/api/student/profile');
+      // Use role-agnostic endpoint so TEACHER/ADMIN sessions are restored too.
+      final response = await _apiClient.get('/api/auth/me');
       return User.fromJson(
         Map<String, dynamic>.from(response.data as Map),
         token: token,

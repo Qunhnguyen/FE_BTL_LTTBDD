@@ -4,6 +4,7 @@ import '../../../auth/providers/auth_provider.dart';
 import '../models/quiz.dart';
 import '../providers/quiz_providers.dart';
 import '../repositories/classroom_repository.dart';
+import '../repositories/quiz_repository.dart';
 import 'teacher_contest_list_screen.dart';
 
 class CreateQuizForm extends ConsumerStatefulWidget {
@@ -133,7 +134,10 @@ class _CreateQuizFormState extends ConsumerState<CreateQuizForm> {
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))
                 ),
                 onPressed: _submit,
-                child: const Text('XÁC NHẬN LƯU QUIZ', style: TextStyle(fontWeight: FontWeight.bold)),
+                child: Text(
+                  widget.quizToEdit != null ? 'CẬP NHẬT QUIZ' : 'TẠO VÀ PUBLISH QUIZ',
+                  style: const TextStyle(fontWeight: FontWeight.bold),
+                ),
               ),
             ),
           ],
@@ -203,10 +207,22 @@ class _CreateQuizFormState extends ConsumerState<CreateQuizForm> {
       };
 
       try {
+        final actions = ref.read(quizActionsControllerProvider.notifier);
         if (widget.quizToEdit != null) {
-          await ref.read(quizActionsControllerProvider.notifier).updateQuiz(widget.subjectId, widget.quizToEdit!.id, data);
+          await actions.updateQuiz(widget.subjectId, widget.quizToEdit!.id, data);
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('Đã cập nhật quiz')),
+            );
+          }
         } else {
-          await ref.read(quizActionsControllerProvider.notifier).createQuiz(widget.subjectId, data);
+          final createdQuiz = await actions.createQuiz(widget.subjectId, data);
+          await actions.publishQuiz(widget.subjectId, createdQuiz.id);
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('Đã tạo và publish quiz, sinh viên có thể thấy ngay')),
+            );
+          }
         }
         if (mounted) Navigator.pop(context);
       } catch (e) {

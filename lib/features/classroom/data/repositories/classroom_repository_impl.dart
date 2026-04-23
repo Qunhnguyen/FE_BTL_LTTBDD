@@ -98,6 +98,14 @@ class ClassroomRepositoryImpl implements ClassroomRepository {
   }
 
   @override
+  Future<List<Map<String, dynamic>>> getStudentClassroomQuizzes(String classroomId) async {
+    final response = await _apiClient.get('/api/student/classrooms/$classroomId/quizzes');
+    if (response.data == null) return [];
+    final List<dynamic> list = response.data;
+    return list.map((e) => Map<String, dynamic>.from(e)).toList();
+  }
+
+  @override
   Future<ClassroomResponse> joinByCode(String inviteCode) async {
     final response = await _apiClient.post(
       '/api/student/classrooms/join-by-code',

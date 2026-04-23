@@ -276,9 +276,19 @@ class _TeacherClassroomDetailScreenState extends ConsumerState<TeacherClassroomD
 
   void _showInviteStudentsDialog(dynamic classroom) async {
     final repo = ref.read(classroomRepositoryProvider);
-    final allStudents = await repo.getAllStudents();
-    final List<String> existingIds = List<String>.from(classroom.studentIds ?? []);
-    final availableStudents = allStudents.where((s) => !existingIds.contains(s.id)).toList();
+    List<dynamic> availableStudents = [];
+    try {
+      final allStudents = await repo.getAllStudents();
+      final List<String> existingIds = List<String>.from(classroom.studentIds ?? []);
+      availableStudents = allStudents.where((s) => !existingIds.contains(s.id)).toList();
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Không tải được danh sách sinh viên: $e'), backgroundColor: Colors.red),
+        );
+      }
+      return;
+    }
 
     if (!mounted) return;
     List<String> selectedIds = [];

@@ -16,6 +16,7 @@ abstract class ClassroomRepository {
 
   // Student APIs
   Future<List<ClassroomResponse>> getStudentClassrooms();
+  Future<List<Map<String, dynamic>>> getStudentClassroomQuizzes(String classroomId);
   Future<ClassroomResponse> joinByCode(String inviteCode);
   Future<ClassroomResponse> acceptInvite(String notificationId);
   Future<void> declineInvite(String notificationId);

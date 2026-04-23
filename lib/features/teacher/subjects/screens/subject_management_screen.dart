@@ -3,11 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../core/router/app_router.dart';
 import '../models/subject.dart';
+import '../providers/subject_providers.dart';
 import '../repositories/subject_repository.dart';
-
-final subjectsProvider = FutureProvider<List<Subject>>((ref) async {
-  return ref.watch(subjectRepositoryProvider).getSubjects();
-});
 
 class SubjectManagementScreen extends ConsumerWidget {
   const SubjectManagementScreen({super.key});
@@ -81,7 +78,21 @@ class SubjectManagementScreen extends ConsumerWidget {
                       },
                       leading: const CircleAvatar(child: Icon(Icons.book)),
                       title: Text(subject.name, style: const TextStyle(fontWeight: FontWeight.bold)),
-                      subtitle: Text(subject.description ?? 'Không có mô tả'),
+                      subtitle: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(subject.description ?? 'Không có mô tả'),
+                          const SizedBox(height: 4),
+                          Text(
+                            (subject.isPublic ?? false) ? 'Public' : 'Private',
+                            style: TextStyle(
+                              color: (subject.isPublic ?? false) ? Colors.green : Colors.orange,
+                              fontWeight: FontWeight.w600,
+                              fontSize: 12,
+                            ),
+                          ),
+                        ],
+                      ),
                       trailing: const Icon(Icons.chevron_right),
                     ),
                   );
@@ -186,7 +197,8 @@ class SubjectManagementScreen extends ConsumerWidget {
                             await ref.read(subjectRepositoryProvider).createSubject(
                                   Subject(id: '', name: nameController.text, description: descController.text),
                                 );
-                            ref.refresh(subjectsProvider);
+                            ref.invalidate(subjectsProvider);
+                            await ref.read(subjectsProvider.future);
                             if (context.mounted) {
                               Navigator.pop(context);
                               ScaffoldMessenger.of(context).showSnackBar(

@@ -33,6 +33,14 @@ class QuestionRepository {
     return ManagedQuestion.fromJson(response.data);
   }
 
+  Future<ManagedQuestion> updateQuestionLevel(String id, String level) async {
+    final response = await _apiClient.patch(
+      '/api/admin/questions/$id/level',
+      data: {'level': level},
+    );
+    return ManagedQuestion.fromJson(response.data);
+  }
+
   Future<void> importQuestionsFromCsv(String contestId, String filePath) async {
     final formData = FormData.fromMap({
       'file': await MultipartFile.fromFile(filePath),

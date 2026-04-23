@@ -59,7 +59,7 @@ class ManagedQuestion {
     return ManagedQuestion(
       id: json['id']?.toString() ?? '',
       text: questionText,
-      difficulty: _parseDifficulty(json['difficulty']),
+      difficulty: _parseDifficulty(json['difficulty'] ?? json['level']),
       points: questionPoints,
       answerCount: answerCount,
       durationSeconds: questionDuration,
@@ -73,11 +73,22 @@ class ManagedQuestion {
     );
   }
 
-  static QuestionDifficulty _parseDifficulty(String? difficulty) {
-    switch (difficulty?.toUpperCase()) {
+  static QuestionDifficulty _parseDifficulty(dynamic difficultyRaw) {
+    final difficulty = (difficultyRaw ?? '').toString().trim().toUpperCase();
+    switch (difficulty) {
       case 'EASY': return QuestionDifficulty.easy;
       case 'MEDIUM': return QuestionDifficulty.medium;
       case 'HARD': return QuestionDifficulty.hard;
+      case 'DE':
+      case 'DỄ':
+        return QuestionDifficulty.easy;
+      case 'TRUNGBINH':
+      case 'TRUNG_BINH':
+      case 'TRUNG BÌNH':
+        return QuestionDifficulty.medium;
+      case 'KHO':
+      case 'KHÓ':
+        return QuestionDifficulty.hard;
       default: return QuestionDifficulty.draft;
     }
   }

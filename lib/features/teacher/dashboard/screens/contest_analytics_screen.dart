@@ -384,7 +384,7 @@ class ContestAnalyticsScreen extends ConsumerWidget {
 
   void _updateLevel(BuildContext context, WidgetRef ref, OptionAnalysis oa, String level) async {
     try {
-      await ref.read(questionRepositoryProvider).updateQuestion(oa.questionId, {'level': level});
+      await ref.read(questionRepositoryProvider).updateQuestionLevel(oa.questionId, level);
       if (context.mounted) {
         Navigator.pop(context);
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Đã cập nhật câu thành $level')));

@@ -104,11 +104,13 @@ class QuizCatalogScreen extends ConsumerWidget {
                         height: 52,
                         child: ElevatedButton(
                           onPressed: canStart
-                              ? () {
-                                  context.pushNamed(
+                              ? () async {
+                                  await context.pushNamed(
                                     AppRouteNames.studentQuiz,
                                     pathParameters: {'contestId': quiz['id'].toString()},
                                   );
+                                  // Refresh when returning so remaining attempts reflects latest submission.
+                                  ref.invalidate(studentQuizListProvider(subjectId));
                                 }
                               : null,
                           style: ElevatedButton.styleFrom(
